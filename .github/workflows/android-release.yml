@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build (e.g. v0.1.1)"
+        description: "Existing tag to rebuild (e.g. v0.1.1)"
         required: true
 
 permissions:
@@ -26,18 +26,45 @@ jobs:
         id: tag
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "ref=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
-            echo "name=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            ref="${{ inputs.tag }}"
           else
             ref="${GITHUB_REF#refs/tags/}"
-            echo "ref=$ref" >> "$GITHUB_OUTPUT"
-            echo "name=$ref" >> "$GITHUB_OUTPUT"
           fi
+          version="${ref#v}"
+          echo "ref=$ref"          >> "$GITHUB_OUTPUT"
+          echo "name=$ref"         >> "$GITHUB_OUTPUT"
+          echo "version=$version"  >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.tag.outputs.ref }}
           fetch-depth: 0
+
+      - name: Extract release notes from CHANGELOG.md
+        run: |
+          version='${{ steps.tag.outputs.version }}'
+          if [[ ! -f CHANGELOG.md ]]; then
+            printf "## Get Sauce %s\n\nAndroid build of the get-sauce downloader.\n" "$version" > release-body.md
+            exit 0
+          fi
+          awk -v ver="$version" '
+            $0 ~ "^## \\[" ver "\\]" { grab=1; next }
+            grab && /^## \[/         { exit }
+            grab                     { print }
+          ' CHANGELOG.md > extracted.md
+          if [[ ! -s extracted.md ]]; then
+            printf "## Get Sauce %s\n\nAndroid build of the get-sauce downloader.\n" "$version" > release-body.md
+          else
+            {
+              cat extracted.md
+              printf "\n---\n\n### Install\n"
+              printf "1. Download the APK below.\n"
+              printf "2. Transfer to your phone (email / Drive / USB).\n"
+              printf "3. Tap the APK. On the security prompt, tap **Settings** → allow installs from that source → **Install**.\n"
+              printf "4. Open the app → **Settings** → pick an output folder → **Home** → paste a URL → **Fetch info** → **Download**.\n"
+            } > release-body.md
+          fi
+          cat release-body.md
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -98,15 +125,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.ref }}
-          name: ${{ steps.tag.outputs.name }}
-          generate_release_notes: true
+          name: Get Sauce ${{ steps.tag.outputs.name }}
+          body_path: release-body.md
           files: |
             out/get-sauce-${{ steps.tag.outputs.name }}.apk
-          body: |
-            ## Get Sauce ${{ steps.tag.outputs.name }}
-
-            Android build of the get-sauce downloader.
-
-            **Install:** download the APK below, transfer it to your phone, tap to install. On the "For your security..." prompt, tap **Settings** → enable installs from that source → back → **Install**.
-
-            APK is signed with the debug key so it installs cleanly over previous versions.
