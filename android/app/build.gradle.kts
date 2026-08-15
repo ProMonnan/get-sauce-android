@@ -91,7 +91,6 @@ android {
 dependencies {
     // --- Go bridge (built by ../scripts/build-aar.sh) ---
     // The flatDir repository is declared in settings.gradle.kts.
-    implementation("com.arthenica:ffmpeg-kit-min:6.0-2.LTS")
     // gomobile-generated code depends on this.
     // The gobind jar is shipped inside the AAR since gomobile 0.0.0-20240912, but
     // if your gomobile version is older uncomment the line above and drop
