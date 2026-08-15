@@ -1,0 +1,59 @@
+package danbooru
+
+import (
+	"testing"
+
+	"github.com/gan-of-culture/get-sauce/test"
+)
+
+func TestParseURL(t *testing.T) {
+	tests := []struct {
+		Name string
+		URL  string
+		Want int
+	}{
+		{
+			Name: "Overview page",
+			URL:  "https://danbooru.donmai.us/posts?page=3&tags=fire_emblem",
+			Want: 2,
+		}, {
+			Name: "Example Post",
+			URL:  "https://danbooru.donmai.us/posts/3749687",
+			Want: 1,
+		},
+	}
+	e := newForTesting()
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			URLs, err := e.parseURL(tt.URL)
+			test.CheckError(t, err)
+			if len(URLs) < tt.Want {
+				t.Errorf("Got: %v - Want: %v", len(URLs), tt.Want)
+			}
+		})
+	}
+}
+
+func TestExtract(t *testing.T) {
+	tests := []struct {
+		Name string
+		Args test.Args
+	}{
+		{
+			Name: "Default extraction",
+			Args: test.Args{
+				URL:     "https://danbooru.donmai.us/posts/3749687",
+				Title:   "konpaku_youmu_touhou_drawn_by_niwashi_yuyu_3749687",
+				Quality: "1782x2048",
+				Size:    394000,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			data, err := New().Extract(tt.Args.URL)
+			test.CheckError(t, err)
+			test.Check(t, tt.Args, data[0])
+		})
+	}
+}

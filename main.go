@@ -1,0 +1,151 @@
+package main
+
+import (
+	"bufio"
+	"cmp"
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"os/exec"
+	"runtime/debug"
+	"strings"
+
+	"github.com/gan-of-culture/get-sauce/config"
+	"github.com/gan-of-culture/get-sauce/downloader"
+	"github.com/gan-of-culture/get-sauce/extractors"
+	"github.com/gan-of-culture/get-sauce/static"
+	"golang.org/x/sync/errgroup"
+)
+
+// name of the application
+const name = "get-sauce"
+const versionDefault = "v0.0.0"
+
+// version is overridden by ldflags in release
+var version = versionDefault
+
+func init() {
+	flag.IntVar(&config.Amount, "a", 0, "Amount of files to download")
+	flag.IntVar(&config.Caption, "c", -1, "Download caption to a extra file")
+	flag.StringVar(&config.File, "F", "", "Download all URLs from a file")
+	flag.StringVar(&config.UserHeaders, "h", "", "UserHeaders for the HTTP requests. To bypass Cloudflare or DDOS-GUARD protection")
+	flag.BoolVar(&config.ShowInfo, "i", false, "Show info")
+	flag.BoolVar(&config.ShowExtractedData, "j", false, "Show extracted data as json")
+	flag.Var(&config.Merge, "m", "Merge output (default, none, cbz). CBZ only works if output is a stream of datatype image")
+	flag.StringVar(&config.OutputName, "o", "", "Output name")
+	flag.StringVar(&config.OutputPath, "O", "", "Output path (include ending delimiter)")
+	flag.StringVar(&config.Pages, "p", "", "Enter pages like 1,2,3-4,6,7,8-9 for doujins")
+	flag.BoolVar(&config.Quiet, "q", false, "Quiet mode - show minimal information")
+	flag.StringVar(&config.SelectStream, "s", "0", "Select a stream")
+	flag.BoolVar(&config.Subdirectory, "S", false, "Subdirectory for the downloaded content. The directory name defaults to a cleaned up version of the data title")
+	flag.BoolVar(&config.Truncate, "t", false, "Truncate file if it already exists")
+	flag.IntVar(&config.Timeout, "T", 10, "Timeout for the http.client in minutes")
+	flag.BoolVar(&config.Version, "v", false, "Print the current version")
+	flag.IntVar(&config.Workers, "w", 1, "Number of workers used for downloading")
+}
+
+func download(URL string) error {
+	if config.Merge == config.MergeOptDefault {
+		_, err := exec.LookPath("ffmpeg")
+		if err != nil {
+			log.Println("No merging possible, because ffmpeg is not installed or not found in PATH")
+			config.Merge = config.MergeOptNone
+		}
+	}
+
+	data, err := extractors.Extract(URL)
+	if err != nil {
+		return err
+	}
+
+	if config.ShowExtractedData {
+		for _, singleData := range data {
+			jsonData, _ := json.MarshalIndent(singleData, "", "    ")
+			fmt.Printf("%s\n", jsonData)
+		}
+		return nil
+	}
+
+	if config.SelectStream == "" {
+		config.SelectStream = "0"
+	}
+
+	lenOfData := len(data)
+	datachan := make(chan *static.Data, lenOfData)
+	errs, _ := errgroup.WithContext(context.TODO())
+	downloader := downloader.New(!config.Quiet)
+
+	/*
+		We have 3 main types of data that has to be downloaded concurrently
+		1. lenOfData = 3000 e.g. mass scraping image boards
+		2. lenOfData = 1 URLs = 200 e.g. doujin
+		3. lenOfData = 1-10 but big file size e.g.hentai video
+		here in main we will deal with the first type
+	*/
+	for range min(config.Workers, lenOfData) {
+		errs.Go(func() error {
+			for {
+				d, ok := <-datachan
+				if !ok {
+					return nil
+				}
+				err := downloader.Download(d)
+				if err != nil {
+					return err
+				}
+			}
+		})
+	}
+
+	for _, d := range data {
+		datachan <- d
+	}
+	close(datachan)
+	return errs.Wait()
+}
+
+func main() {
+	flag.Parse()
+	args := flag.Args()
+	if config.Version {
+		// if installed with go install
+		if version == "" || version == versionDefault {
+			bi, ok := debug.ReadBuildInfo()
+			if ok && bi.Main.Version != "" {
+				version = bi.Main.Version
+			}
+		}
+		fmt.Printf("\n%s: version %s\n\n", name, version)
+		return
+	}
+
+	if config.File != "" {
+		f, err := os.Open(config.File)
+		if err != nil {
+			log.Fatalf("%+v", err)
+		}
+		defer f.Close()
+		s := bufio.NewScanner(f)
+		for s.Scan() {
+			args = append(args, strings.TrimSpace(s.Text()))
+		}
+	}
+
+	config.Merge = cmp.Or(config.Merge, config.MergeOptDefault)
+
+	if len(args) < 1 {
+		fmt.Println("Too few arguments")
+		fmt.Println("Usage: get-sauce [args] URLs...")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	for _, a := range args {
+		if err := download(a); err != nil {
+			log.Fatalf("%+v", err)
+		}
+	}
+}
