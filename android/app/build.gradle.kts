@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "app.sahal.getsauce"
-        minSdk = 26          // ffmpeg-kit-android-mini needs 24+; Room needs 21; we pick 26 for MediaStore/SAF stability
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
@@ -70,14 +70,11 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "/META-INF/DEPENDENCIES"
         }
-        // ffmpeg-kit ships duplicate .so paths for older ABIs; skip the ones we don't care about.
         jniLibs {
             useLegacyPackaging = false
         }
     }
 
-    // Splitting per-ABI keeps the APK small (~30MB vs ~110MB for all four).
-    // For local dev the "universal" APK is easier — turn this on for release builds.
     splits {
         abi {
             isEnable = false
@@ -89,12 +86,8 @@ android {
 }
 
 dependencies {
-    // --- Go bridge (built by ../scripts/build-aar.sh) ---
-    // The flatDir repository is declared in settings.gradle.kts.
-    // gomobile-generated code depends on this.
-    // The gobind jar is shipped inside the AAR since gomobile 0.0.0-20240912, but
-    // if your gomobile version is older uncomment the line above and drop
-    // gobind.jar into libs/ as well.
+    // --- Go bridge AAR (built by ../scripts/build-aar.sh, dropped into app/libs/) ---
+    implementation(fileTree("libs") { include("*.aar") })
 
     // --- AndroidX / Compose ---
     val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
@@ -124,10 +117,6 @@ dependencies {
     // --- Coroutines / serialization ---
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.2")
-
-    // --- ffmpeg-kit (mini keeps APK small; swap to full-gpl for exotic codecs) ---
-    // The mini build supports HLS, MP4/MOV muxing, AAC/H.264/HEVC — enough for
-    // everything the get-sauce extractors emit.
 
     // --- Documents / SAF helper ---
     implementation("androidx.documentfile:documentfile:1.0.1")
