@@ -9,10 +9,6 @@ import java.io.File
  * from Maven Central. Until we swap in a maintained fork, we skip the final
  * mux step entirely: the user gets the main video file, and any separate
  * audio/caption tracks are left as sidecar files next to it.
- *
- * This means multi-track video streams (e.g. hstream.moe with separate audio)
- * produce a video-only file. The extra files are still in the staging dir if
- * the user wants to mux them manually.
  */
 class FfmpegMerger(private val stagingDir: File) {
     fun mergeIfNeeded(res: DownloadResult, onLog: (String) -> Unit = {}): File? {
