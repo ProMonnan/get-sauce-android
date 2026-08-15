@@ -1,0 +1,17 @@
+*.iml
+.gradle/
+local.properties
+.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+*.aab
+release/
+
+# Keep the layout, but don't commit the generated AAR — CI or build-aar.sh writes it.
+app/libs/*.aar
+app/libs/*.jar
+!app/libs/.gitkeep

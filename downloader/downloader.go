@@ -403,6 +403,12 @@ func (downloader *downloaderStruct) writeFile(URL string, file *os.File, headers
 	if downloader.bar {
 		writer = io.MultiWriter(file, downloader.progressBar)
 	}
+	// Mobile progress hook: mirror bytes to the mobile listener if one is installed.
+	if v := progressCallback.Load(); v != nil {
+		if cb, ok := v.(func(int64)); ok && cb != nil {
+			writer = io.MultiWriter(writer, partProgress{})
+		}
+	}
 
 	// Note that io.Copy reads 32kb(maximum) from input and writes them to output, then repeats.
 	// So don't worry about memory.

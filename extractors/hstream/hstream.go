@@ -16,7 +16,7 @@ import (
 	"github.com/gan-of-culture/get-sauce/request"
 	"github.com/gan-of-culture/get-sauce/static"
 	"github.com/gan-of-culture/get-sauce/utils"
-	"golang.org/x/exp/slices"
+	"slices"
 )
 
 const site = "https://hstream.moe/"
