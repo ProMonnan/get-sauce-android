@@ -332,6 +332,8 @@ func (downloader *downloaderStruct) concurWriteFile(URL string, file *os.File, h
 				if downloader.bar {
 					downloader.progressBar.Add(written)
 				}
+				// Mobile progress hook: mirror bytes to the mobile listener if one is installed.
+				fireProgress(int64(written))
 				lock.Unlock()
 
 				if saveErr != nil {
