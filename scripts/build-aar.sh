@@ -46,6 +46,9 @@ fi
 
 mkdir -p "$out_dir"
 
+echo "→ Registering gomobile as a tool dependency"
+(cd "$repo_root" && go get -tool golang.org/x/mobile/cmd/gobind)
+
 echo "→ Running go mod tidy"
 (cd "$repo_root" && go mod tidy)
 
