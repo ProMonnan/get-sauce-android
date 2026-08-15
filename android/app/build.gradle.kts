@@ -93,7 +93,6 @@ dependencies {
     // The flatDir repository is declared in settings.gradle.kts.
     implementation("com.arthenica:ffmpeg-kit-min:6.0-2.LTS")
     // gomobile-generated code depends on this.
-    implementation("org.golang:gobind:0.0.0")
     // The gobind jar is shipped inside the AAR since gomobile 0.0.0-20240912, but
     // if your gomobile version is older uncomment the line above and drop
     // gobind.jar into libs/ as well.
@@ -129,7 +128,6 @@ dependencies {
     // --- ffmpeg-kit (mini keeps APK small; swap to full-gpl for exotic codecs) ---
     // The mini build supports HLS, MP4/MOV muxing, AAC/H.264/HEVC — enough for
     // everything the get-sauce extractors emit.
-    implementation("com.arthenica:ffmpeg-kit-min:6.0-2.LTS")
 
     // --- Documents / SAF helper ---
     implementation("androidx.documentfile:documentfile:1.0.1")
