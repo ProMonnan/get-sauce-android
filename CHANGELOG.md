@@ -10,6 +10,15 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [0.1.2] - 2026-08-16
+
+   ### Fixed
+   - CI release workflow: `gomobile` bind now properly registers as a tool dependency, letting tag-triggered builds succeed.
+   - `scripts/build-aar.sh` runs `go get -tool` before invoking gomobile, matching what modern gomobile requires.
+
+   ### Notes
+   - v0.1.1 was tagged before these CI fixes and published desktop binaries only (the goreleaser workflow ran, the Android release didn't). v0.1.2 is the first tag where the Android release workflow completes end-to-end.
+
 ## [0.1.1] - 2026-08-15
 
 ### Fixed
