@@ -1,5 +1,11 @@
 package app.sahal.moegrab.ui.info
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.EaseOutCubic
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,13 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,7 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -39,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import app.sahal.moegrab.R
 import app.sahal.moegrab.bridge.ExtractedData
 import app.sahal.moegrab.bridge.ExtractedStream
+import app.sahal.moegrab.ui.common.InfoSkeleton
 import app.sahal.moegrab.ui.common.rememberVm
 import app.sahal.moegrab.util.humanBytes
 
@@ -71,12 +80,8 @@ fun InfoScreen(url: String, onBack: () -> Unit) {
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
-                state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
-                state.error != null -> Text(
-                    text = stringResource(R.string.err_extract_fmt, state.error!!),
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.error,
-                )
+                state.loading -> InfoSkeleton()
+                state.error != null -> ErrorView(state.error!!)
                 else -> InfoBody(state, vm)
             }
         }
@@ -84,13 +89,47 @@ fun InfoScreen(url: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun InfoBody(state: InfoUiState, vm: InfoViewModel) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+private fun ErrorView(msg: String) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        items(state.results, key = { it.sourceUrl + it.title }) { data ->
-            EntryCard(data, state.selectedStreamId[data.sourceUrl], vm)
+        Text(
+            stringResource(R.string.err_extract_fmt, msg),
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Text(
+            "The site may be Cloudflare-protected, geo-blocked, or the URL " +
+                "may not match a supported extractor. Try pasting session " +
+                "cookies in Settings → User headers.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun InfoBody(state: InfoUiState, vm: InfoViewModel) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        itemsIndexed(state.results, key = { _, item -> item.sourceUrl + item.title }) { i, data ->
+            // Staggered card entrance: each card fades + slides in slightly later
+            // than the previous one. Feels alive without slowing the user down.
+            var shown by remember(data) { mutableStateOf(false) }
+            LaunchedEffect(data) { shown = true }
+            AnimatedVisibility(
+                visible = shown,
+                enter = fadeIn(tween(400, delayMillis = i * 80)) +
+                    slideInVertically(
+                        initialOffsetY = { it / 6 },
+                        animationSpec = tween(400, delayMillis = i * 80, easing = EaseOutCubic),
+                    ),
+            ) {
+                EntryCard(data, state.selectedStreamId[data.sourceUrl], vm)
+            }
         }
     }
 }
@@ -98,15 +137,27 @@ private fun InfoBody(state: InfoUiState, vm: InfoViewModel) {
 @Composable
 private fun EntryCard(data: ExtractedData, selected: String?, vm: InfoViewModel) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(300)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = MaterialTheme.shapes.medium,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(data.title, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-            Text("${data.site}   •   ${data.type}", style = MaterialTheme.typography.bodySmall)
+            Text(
+                data.title,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                "${data.site}   •   ${data.type}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             data.streams.forEach { s ->
                 StreamRow(
@@ -120,15 +171,17 @@ private fun EntryCard(data: ExtractedData, selected: String?, vm: InfoViewModel)
                 text = if (data.captions.isEmpty()) stringResource(R.string.info_caption_none)
                        else "Captions: " + data.captions.joinToString { it.language },
                 style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 horizontalArrangement = Arrangement.End,
             ) {
-                androidx.compose.material3.Button(
+                Button(
                     onClick = { vm.enqueue(data) },
                     enabled = data.streams.isNotEmpty(),
+                    shape = MaterialTheme.shapes.medium,
                 ) {
                     Icon(Icons.Filled.Download, contentDescription = null)
                     Text(stringResource(R.string.info_download), modifier = Modifier.padding(start = 8.dp))
@@ -163,7 +216,11 @@ private fun StreamRow(
                     append(humanBytes(stream.size))
                 }
             }
-            if (sub.isNotBlank()) Text(sub, style = MaterialTheme.typography.bodySmall)
+            if (sub.isNotBlank()) Text(
+                sub,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }

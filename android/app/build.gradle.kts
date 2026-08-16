@@ -22,8 +22,8 @@ android {
         applicationId = "app.sahal.moegrab"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.1.7"
+        versionCode = 8
+        versionName = "1.0.0"
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -107,6 +107,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
+    // Explicit animation deps — pulled transitively by material3 too, listed
+    // here so v1.0's polish pass (AnimatedVisibility, animateContentSize,
+    // slide+fade transitions) can't silently regress if that transitive drops.
+    implementation("androidx.compose.animation:animation")
+    implementation("androidx.compose.animation:animation-core")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 

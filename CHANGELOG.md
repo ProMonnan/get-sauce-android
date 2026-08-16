@@ -10,6 +10,58 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [1.0.0] - 2026-08-16
+
+**First stable release.** The app is renamed, re-iconed, and now looks the
+part — 1.0 is the version where the surface stops looking like a debug
+scaffold and starts looking like a real product. No download-pipeline
+changes; everything below is UI/UX.
+
+### Added
+- **Brand color scheme** derived from the launcher icon: rose + navy in
+  dark mode (matches the cat's cream + navy palette), deep rose on soft
+  pink-white in light mode. **Dynamic Material You is now off** — the
+  app's identity stays consistent regardless of the user's wallpaper.
+- **Rounder shape system.** All cards, buttons, and dialogs use larger
+  corner radii (8/12/18/24/32 dp) to match the chibi mascot's soft look.
+- **Display typography.** Headline and display styles now use extra-bold
+  weights with tight tracking — the app name reads like a logo, not
+  system default. (A bundled Rubik face lands in v1.1.)
+- **Screen transitions.** Nav destinations slide + fade in/out instead of
+  cutting; the back gesture reverses direction so hierarchy is legible.
+- **Shimmer skeleton loader** on the extract-info screen — replaces the
+  bare spinner while a URL is being scraped. Two fake card silhouettes
+  with a diagonal sweep, so the wait feels *active* not stalled.
+- **Empty states with illustrations.** The empty queue shows a
+  hand-drawn sleeping-cat animation (with bobbing "Zzz"s); empty history
+  shows a stylized empty box. Includes friendly copy telling the user
+  what to do next.
+- **Download-complete confetti.** When a queue item flips to COMPLETED
+  a burst of rose/cream/gold/navy particles radiates from the center
+  of the queue screen. Fires only on new completions, not on scroll-in
+  of existing ones.
+- **Live UI animations.** Cards on the info screen fade + slide in with
+  a small stagger; queue rows animate their own size changes when
+  progress bars appear/disappear; completed jobs get a tinted background
+  so they stand out from active ones.
+- **Improved home hero.** Chip logo + "Grab it. Save it. Watch it later."
+  tagline; the fetch button and paste field are taller, rounder, and have
+  leading icons so the primary flow is unmistakable.
+- **Better queue status icons.** Per-status glyph (hourglass, downloading,
+  merging, checkmark, error, cancelled) with role-appropriate tint —
+  scannable at a glance without reading the status text.
+
+### Changed
+- `Theme.kt` refactored into `Color.kt` + `Shape.kt` + `Type.kt` +
+  `Theme.kt` — every design token lives in exactly one file.
+
+### Notes
+- Version bumped from the 0.1.x series to **1.0.0**. Future minor bumps
+  (1.1, 1.2, ...) will land features; patch bumps (1.0.1) will land
+  bug fixes.
+- Because `applicationId` did not change, this installs cleanly over
+  v0.1.7 with settings and history intact — no need to uninstall first.
+
 ## [0.1.7] - 2026-08-16
 
 ### Fixed

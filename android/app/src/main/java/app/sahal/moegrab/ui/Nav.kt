@@ -1,6 +1,11 @@
 package app.sahal.moegrab.ui
 
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
@@ -33,8 +38,6 @@ import app.sahal.moegrab.ui.sites.SitesScreen
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-// Route constants. Kept as strings + tiny helpers rather than a sealed class
-// hierarchy — the app has ~6 destinations and lightweight is fine.
 object Routes {
     const val HOME = "home"
     const val QUEUE = "queue"
@@ -42,13 +45,19 @@ object Routes {
     const val SETTINGS = "settings"
     const val SITES = "sites"
 
-    // Info takes the URL as an arg; we URL-encode to survive Nav's path parsing.
     const val INFO_PATTERN = "info/{url}"
     fun info(url: String): String = "info/${URLEncoder.encode(url, "UTF-8")}"
 
     fun decodeUrlArg(raw: String?): String? =
         raw?.let { URLDecoder.decode(it, "UTF-8") }
 }
+
+// Screen-transition durations tuned to feel snappy — a slow slide reads
+// as sluggish on a phone. 220ms in, 180ms out.
+private val NAV_ENTER = tween<Float>(220, easing = EaseInOutCubic)
+private val NAV_EXIT = tween<Float>(180, easing = EaseInOutCubic)
+private val NAV_SLIDE_IN = tween<androidx.compose.ui.unit.IntOffset>(220, easing = EaseInOutCubic)
+private val NAV_SLIDE_OUT = tween<androidx.compose.ui.unit.IntOffset>(180, easing = EaseInOutCubic)
 
 @Composable
 fun AppNavHost(initialUrl: MutableState<String?>) {
@@ -60,6 +69,18 @@ fun AppNavHost(initialUrl: MutableState<String?>) {
             navController = nav,
             startDestination = Routes.HOME,
             modifier = Modifier.padding(padding),
+            enterTransition = {
+                slideInHorizontally(NAV_SLIDE_IN) { it / 6 } + fadeIn(NAV_ENTER)
+            },
+            exitTransition = {
+                slideOutHorizontally(NAV_SLIDE_OUT) { -it / 8 } + fadeOut(NAV_EXIT)
+            },
+            popEnterTransition = {
+                slideInHorizontally(NAV_SLIDE_IN) { -it / 6 } + fadeIn(NAV_ENTER)
+            },
+            popExitTransition = {
+                slideOutHorizontally(NAV_SLIDE_OUT) { it / 8 } + fadeOut(NAV_EXIT)
+            },
         ) {
             addHome(nav, initialUrl)
             composable(Routes.INFO_PATTERN) { back ->
