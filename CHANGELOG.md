@@ -10,29 +10,55 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
-## [0.1.2] - 2026-08-16
+## [0.1.4] - 2026-08-16
 
-   ### Fixed
-   - CI release workflow: `gomobile` bind now properly registers as a tool dependency, letting tag-triggered builds succeed.
-   - `scripts/build-aar.sh` runs `go get -tool` before invoking gomobile, matching what modern gomobile requires.
+### Added
+- **Custom app icon** — chibi anime cat mascot on a dark navy background,
+  waving a paw. Full launcher/adaptive icon set at every density.
 
-   ### Notes
-   - v0.1.1 was tagged before these CI fixes and published desktop binaries only (the goreleaser workflow ran, the Android release didn't). v0.1.2 is the first tag where the Android release workflow completes end-to-end.
+### Fixed
+- CI: use `bash gradlew` and `bash scripts/build-aar.sh` so Linux runners
+  don't hit "Permission denied" when the exec bit is stripped by round-trips
+  through Windows filesystems (zip extracts).
+- Compose theme + resource references updated to `Theme.MoeGrab` /
+  `MoeGrabTheme` (leftover from the rename).
+## [0.1.3] - 2026-08-16
 
-## [0.1.1] - 2026-08-15
+### Changed
+- **App renamed to MoeGrab.** Launcher label, notifications, release title,
+  APK filenames, and Android package ID all use the new name
+  (`app.sahal.moegrab`).
+- Per-ABI APK splits: `moegrab-v0.1.3-arm64-v8a.apk` (~15 MB, most modern
+  phones) and `moegrab-v0.1.3-universal.apk` (~50 MB, works on anything).
+  Pick arm64 for your daily driver, universal if unsure or for older devices.
+
+### Notes
+- Because the internal package ID changed from `app.sahal.getsauce` to
+  `app.sahal.moegrab`, Android treats this as a fresh app. You must
+  **uninstall v0.1.2** ("Get Sauce") before installing v0.1.3 ("MoeGrab").
+  Downloads and settings from v0.1.2 do not carry over.
+
+## [0.1.2] - 2026-08-15
 
 ### Fixed
 - Progress counter no longer stuck at `0 B` for large single-file downloads
   (MP4s from oppai.stream, hentaiplay.net, etc.). Byte counter now updates
   live for both HLS-fragment and single-blob download paths.
+- CI release workflow: `gomobile bind` now properly registers as a tool
+  dependency; tag-triggered builds succeed.
+
+## [0.1.1] - 2026-08-15
+
+### Fixed
+- Progress counter no longer stuck at `0 B` for HLS-fragment downloads.
 
 ## [0.1.0] - 2026-08-15
 
 ### Added
-- First Android build of `get-sauce`.
+- First Android build.
 - URL → info → quality picker → download flow.
 - Foreground download service with progress notification.
-- Downloads queue, history, and per-site settings (proxy, workers, user
+- Downloads queue, history, per-site settings (proxy, workers, user
   headers, output folder).
 - Persistent output folder chosen via Storage Access Framework.
 - 35 supported sites, mirrored from upstream get-sauce.

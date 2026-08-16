@@ -30,7 +30,7 @@ private val DarkScheme = darkColorScheme(
 )
 
 @Composable
-fun GetSauceTheme(
+fun MoeGrabTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit,
 ) {

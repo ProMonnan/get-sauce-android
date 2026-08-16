@@ -15,15 +15,15 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "app.sahal.getsauce"
+    namespace = "app.sahal.moegrab"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "app.sahal.getsauce"
+        applicationId = "app.sahal.moegrab"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.1.2"
+        versionCode = 5
+        versionName = "0.1.4"
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -75,11 +75,13 @@ android {
         }
     }
 
+    // Per-ABI splits keep each APK small. Universal APK also produced as a safe
+    // fallback for anyone who doesn't know their phone's architecture.
     splits {
         abi {
-            isEnable = false
+            isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            include("arm64-v8a")
             isUniversalApk = true
         }
     }

@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "GetSauce"
+rootProject.name = "MoeGrab"
 include(":app")

@@ -1,5 +1,18 @@
 name: Release
 
+# Fires when a `v*` tag is pushed. Builds the Go AAR + Android APKs, then
+# publishes a GitHub Release with:
+#   * title = "MoeGrab <version>"
+#   * body  = the matching section from CHANGELOG.md
+#   * assets = moegrab-<version>-<abi>.apk (per-ABI splits + universal)
+#
+# Workflow for cutting a new release:
+#   1. Move "Unreleased" bullets in CHANGELOG.md into a new "## [x.y.z] - YYYY-MM-DD" section
+#   2. Bump `versionCode` and `versionName` in android/app/build.gradle.kts
+#   3. Commit + push to main
+#   4. `git tag vx.y.z && git push origin vx.y.z`
+#   5. This workflow runs; ~10 min later the release page is populated
+
 on:
   push:
     tags:
@@ -7,7 +20,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to rebuild (e.g. v0.1.1)"
+        description: "Existing tag to rebuild (e.g. v0.1.3)"
         required: true
 
 permissions:
@@ -40,11 +53,12 @@ jobs:
           ref: ${{ steps.tag.outputs.ref }}
           fetch-depth: 0
 
+      # Pull the matching section out of CHANGELOG.md and stash it as release-body.md.
       - name: Extract release notes from CHANGELOG.md
         run: |
           version='${{ steps.tag.outputs.version }}'
           if [[ ! -f CHANGELOG.md ]]; then
-            printf "## Get Sauce %s\n\nAndroid build of the get-sauce downloader.\n" "$version" > release-body.md
+            printf "## MoeGrab %s\n\nAndroid build.\n" "$version" > release-body.md
             exit 0
           fi
           awk -v ver="$version" '
@@ -53,15 +67,15 @@ jobs:
             grab                     { print }
           ' CHANGELOG.md > extracted.md
           if [[ ! -s extracted.md ]]; then
-            printf "## Get Sauce %s\n\nAndroid build of the get-sauce downloader.\n" "$version" > release-body.md
+            printf "## MoeGrab %s\n\nAndroid build.\n" "$version" > release-body.md
           else
             {
               cat extracted.md
               printf "\n---\n\n### Install\n"
-              printf "1. Download the APK below.\n"
+              printf "1. Download the APK below. If unsure which one, grab **moegrab-%s-universal.apk** — works on any phone.\n" "$version"
               printf "2. Transfer to your phone (email / Drive / USB).\n"
               printf "3. Tap the APK. On the security prompt, tap **Settings** → allow installs from that source → **Install**.\n"
-              printf "4. Open the app → **Settings** → pick an output folder → **Home** → paste a URL → **Fetch info** → **Download**.\n"
+              printf "4. Open **MoeGrab** → **Settings** → pick an output folder → **Home** → paste a URL → **Fetch info** → **Download**.\n"
             } > release-body.md
           fi
           cat release-body.md
@@ -112,20 +126,26 @@ jobs:
 
       - name: Build APK
         working-directory: android
-        run: ./gradlew --no-daemon :app:assembleDebug
+        run: bash gradlew --no-daemon :app:assembleDebug
 
-      - name: Stage APK with versioned name
+      - name: Stage APKs with versioned names
         run: |
           mkdir -p out
-          cp android/app/build/outputs/apk/debug/app-debug.apk \
-             "out/get-sauce-${{ steps.tag.outputs.name }}.apk"
+          tag='${{ steps.tag.outputs.name }}'
+          for src in android/app/build/outputs/apk/debug/app-*.apk; do
+            base=$(basename "$src" .apk)          # app-arm64-v8a-debug
+            suffix=${base#app-}                   # arm64-v8a-debug
+            suffix=${suffix%-debug}               # arm64-v8a
+            [[ -z "$suffix" ]] && suffix="universal"
+            cp "$src" "out/moegrab-${tag}-${suffix}.apk"
+          done
           ls -lh out
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.ref }}
-          name: Get Sauce ${{ steps.tag.outputs.name }}
+          name: MoeGrab ${{ steps.tag.outputs.name }}
           body_path: release-body.md
           files: |
-            out/get-sauce-${{ steps.tag.outputs.name }}.apk
+            out/moegrab-${{ steps.tag.outputs.name }}-*.apk

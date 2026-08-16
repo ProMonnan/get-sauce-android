@@ -10,7 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import app.sahal.moegrab.ui.theme.GetSauceTheme
+import app.sahal.moegrab.ui.theme.MoeGrabTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         val sharedText = extractSharedText(intent)
 
         setContent {
-            GetSauceTheme {
+            MoeGrabTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val initialUrl = remember { mutableStateOf(sharedText) }
                     AppNavHost(initialUrl = initialUrl)
