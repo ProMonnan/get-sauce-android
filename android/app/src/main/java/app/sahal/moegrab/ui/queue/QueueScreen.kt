@@ -167,8 +167,14 @@ private fun JobRow(
                 val bytesStr = if (job.estimatedBytes > 0)
                     "${humanBytes(job.bytesDone)} / ${humanBytes(job.estimatedBytes)}"
                 else humanBytes(job.bytesDone)
+                // Live speed only makes sense while actively downloading — merging
+                // + queued rows keep the bytes label but hide the speed.
+                val speed = rememberDownloadSpeed(job.bytesDone, job.status)
+                val speedStr = if (speed > 0 && job.status == JobStatus.RUNNING)
+                    "  •  ${humanBytes(speed)}/s"
+                else ""
                 Text(
-                    "${job.status} • $bytesStr",
+                    "${job.status} • $bytesStr$speedStr",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
@@ -190,6 +196,48 @@ private fun JobRow(
             }
         }
     }
+}
+
+/**
+ * Compute a smoothed bytes-per-second rate from consecutive `bytesDone`
+ * samples. Updates at most every ~500ms so the label doesn't jitter.
+ * Returns 0 when the job isn't RUNNING or we don't have two samples yet.
+ *
+ * Kept as a scoped composable-state hook so each JobRow keeps its own
+ * history — no shared ViewModel state, no cross-job leakage.
+ */
+@Composable
+private fun rememberDownloadSpeed(bytesDone: Long, status: JobStatus): Long {
+    var speed by remember { mutableStateOf(0L) }
+    var lastBytes by remember { mutableStateOf(bytesDone) }
+    var lastAtMs by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(bytesDone, status) {
+        if (status != JobStatus.RUNNING) {
+            speed = 0L
+            lastBytes = bytesDone
+            lastAtMs = 0L
+            return@LaunchedEffect
+        }
+        val now = System.currentTimeMillis()
+        if (lastAtMs == 0L) {
+            lastAtMs = now
+            lastBytes = bytesDone
+            return@LaunchedEffect
+        }
+        val elapsed = now - lastAtMs
+        if (elapsed < 500) return@LaunchedEffect
+        val delta = bytesDone - lastBytes
+        if (delta >= 0) {
+            // Exponential smoothing (0.6 new / 0.4 old) so a burst doesn't spike
+            // the label and a stall doesn't collapse it to 0 for a second.
+            val instant = (delta * 1000L) / elapsed
+            speed = if (speed == 0L) instant else ((instant * 6 + speed * 4) / 10)
+        }
+        lastBytes = bytesDone
+        lastAtMs = now
+    }
+    return speed
 }
 
 @Composable

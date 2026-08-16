@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gan-of-culture/get-sauce/config"
@@ -24,11 +25,6 @@ import (
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/sync/errgroup"
 )
-
-type filePiece struct {
-	offset int64
-	length int64
-}
 
 type downloadInfo struct {
 	URL     static.URL
@@ -264,105 +260,165 @@ func (downloader *downloaderStruct) save(URL static.URL, fileURI string, headers
 	return nil
 }
 
+// concurWriteFile splits a single-blob download into N parallel Range requests
+// and writes each range directly to its byte offset with file.WriteAt (safe
+// for concurrent non-overlapping writes on both Linux and Android).
+//
+// Rewritten in v1.2:
+//   - Adaptive chunk size (~fileSize / (2*workers), clamped to 1–8 MB). Small
+//     chunks == more parallel connections in flight, more chances to bypass
+//     per-connection CDN throttling.
+//   - Aborts if the server returns 200 to a Range request instead of 206.
+//     Previously the code would then treat the FULL body as if it were the
+//     requested range and WriteAt at the range's offset — silently corrupting
+//     the file with N overlapping full-file copies.
+//   - Per-chunk retry with linear backoff (up to 3 retries per chunk) so a
+//     single stalled connection doesn't kill the whole download.
+//   - Error propagation via atomic first-error — no shared mutex, no missed
+//     early exit when one worker fails.
+//   - Progress counter is now called with per-chunk bytes as they arrive, so
+//     the mobile UI actually reflects concurrent progress.
 func (downloader *downloaderStruct) concurWriteFile(URL string, file *os.File, headers map[string]string) error {
 	fileSize := downloader.stream.Size
-	pieceSize := int64(10_000_000)
+	if fileSize <= 0 {
+		// Unknown size => can't chunk. Fall back to the streaming writer.
+		return downloader.writeFile(URL, file, headers)
+	}
 
-	var saveErr error
-	lock := sync.Mutex{}
+	workers := config.Workers
+	if workers < 1 {
+		workers = 1
+	}
+	pieceSize := fileSize / int64(workers*2)
+	switch {
+	case pieceSize < 1_000_000:
+		pieceSize = 1_000_000 // 1 MB floor keeps HTTP overhead in check
+	case pieceSize > 8_000_000:
+		pieceSize = 8_000_000 // 8 MB ceiling caps memory + per-chunk time
+	}
+
+	// Enumerate pieces up front.
+	type piece struct{ offset, endIncl int64 }
+	pieces := make([]piece, 0, (fileSize/pieceSize)+1)
+	for off := int64(0); off < fileSize; off += pieceSize {
+		end := off + pieceSize - 1
+		if end >= fileSize {
+			end = fileSize - 1
+		}
+		pieces = append(pieces, piece{off, end})
+	}
+
+	downloader.progressBar = utils.InitPB(utils.ProgressBarConfig{
+		Length:      fileSize,
+		Description: fmt.Sprintf("Downloading %s using %d workers (%d chunks × %s)...", file.Name(), workers, len(pieces), humanChunk(pieceSize)),
+		AsBytes:     true,
+	})
+
+	ch := make(chan piece, len(pieces))
+	for _, p := range pieces {
+		ch <- p
+	}
+	close(ch)
+
+	var firstErr atomic.Value // holds error, set exactly once
 	var wg sync.WaitGroup
-	wg.Add(config.Workers)
-	datachan := make(chan filePiece, config.Workers)
-
-	for i := 0; i < config.Workers; i++ {
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				d, ok := <-datachan
-				if !ok {
-					return
+			for p := range ch {
+				if v := firstErr.Load(); v != nil {
+					return // another worker already failed; abort cleanly
 				}
-
-				req, err := http.NewRequest(http.MethodGet, URL, nil)
-				if err != nil {
-					lock.Lock()
-					saveErr = err
-					lock.Unlock()
-				}
-
-				for k, v := range headers {
-					req.Header.Set(k, v)
-				}
-
-				req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", d.offset, d.length))
-				//fmt.Println(req.Header.Get("Range"))
-
-				res, err := downloader.client.Do(req)
-				if err != nil {
-					lock.Lock()
-					saveErr = err
-					lock.Unlock()
-
-				}
-				//fmt.Printf("Url: %s, Status: %s, Size: %d", URL, res.Status, res.ContentLength)
-				if res.StatusCode != http.StatusPartialContent {
-					time.Sleep(1 * time.Second)
-					res, err = downloader.client.Get(URL)
-					if err != nil {
-						lock.Lock()
-						saveErr = err
-						lock.Unlock()
-					}
-				}
-				defer res.Body.Close()
-				//fmt.Println(res.ContentLength)
-
-				buffer, err := io.ReadAll(res.Body)
-				if err != nil {
-					lock.Lock()
-					saveErr = err
-					lock.Unlock()
-				}
-
-				lock.Lock()
-				written, err := file.WriteAt(buffer, d.offset)
-				if err != nil {
-					saveErr = err
-				}
-				if downloader.bar {
-					downloader.progressBar.Add(written)
-				}
-				// Mobile progress hook: mirror bytes to the mobile listener if one is installed.
-				fireProgress(int64(written))
-				lock.Unlock()
-
-				if saveErr != nil {
+				if err := downloader.downloadRange(URL, file, headers, p.offset, p.endIncl, 3); err != nil {
+					firstErr.CompareAndSwap(nil, err)
 					return
 				}
 			}
 		}()
 	}
-
-	downloader.progressBar = utils.InitPB(utils.ProgressBarConfig{
-		Length:      fileSize,
-		Description: fmt.Sprintf("Downloading %s using %d workers...", file.Name(), config.Workers),
-		AsBytes:     true,
-	})
-
-	var offset int64
-	for ; fileSize > 0; fileSize -= pieceSize {
-		if pieceSize+pieceSize > fileSize {
-			pieceSize += fileSize - pieceSize
-			datachan <- filePiece{offset: offset, length: offset + pieceSize}
-			break
-		}
-		datachan <- filePiece{offset: offset, length: offset + pieceSize - 1}
-		offset += pieceSize
-	}
-	close(datachan)
 	wg.Wait()
 
+	if v := firstErr.Load(); v != nil {
+		if err, _ := v.(error); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// downloadRange fetches [offset,endIncl] into `file` at position `offset`,
+// retrying up to `retries` additional attempts on transient failure.
+// Retries use linear backoff (500ms, 1s, 1.5s). Returns nil on success.
+func (downloader *downloaderStruct) downloadRange(URL string, file *os.File, headers map[string]string, offset, endIncl int64, retries int) error {
+	var lastErr error
+	expected := endIncl - offset + 1
+
+	for attempt := 0; attempt <= retries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(time.Duration(attempt) * 500 * time.Millisecond)
+		}
+
+		req, err := http.NewRequest(http.MethodGet, URL, nil)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", offset, endIncl))
+
+		res, err := downloader.client.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		// The server MUST honour Range with 206 Partial Content. A 200 means
+		// it's sending the full body — we cannot safely stitch that into a
+		// multi-chunk layout, so treat it as a fatal error for this chunk and
+		// let the retry loop back off. If every retry returns 200, we surface
+		// the error and the whole download fails cleanly.
+		if res.StatusCode != http.StatusPartialContent {
+			io.Copy(io.Discard, res.Body) // drain so the connection can be pooled
+			res.Body.Close()
+			lastErr = fmt.Errorf("range request for bytes %d-%d returned status %d", offset, endIncl, res.StatusCode)
+			continue
+		}
+
+		buf := make([]byte, expected)
+		n, err := io.ReadFull(res.Body, buf)
+		res.Body.Close()
+		if err != nil && err != io.ErrUnexpectedEOF {
+			lastErr = err
+			continue
+		}
+		if int64(n) != expected {
+			lastErr = fmt.Errorf("short read: got %d bytes, want %d", n, expected)
+			continue
+		}
+
+		written, err := file.WriteAt(buf, offset)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if downloader.bar {
+			downloader.progressBar.Add(written)
+		}
+		// Mobile progress hook.
+		fireProgress(int64(written))
+		return nil // success
+	}
+	return lastErr
+}
+
+// humanChunk renders a piece size like "2.0 MB" for the progress-bar label.
+// Local helper — the util.humanBytes is int64→string for total bytes and
+// includes B/KB; here we always want "N MB" grain.
+func humanChunk(b int64) string {
+	return fmt.Sprintf("%.1f MB", float64(b)/1_000_000.0)
 }
 
 func (downloader *downloaderStruct) writeFile(URL string, file *os.File, headers map[string]string) error {

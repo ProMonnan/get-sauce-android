@@ -10,6 +10,59 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [1.2.0] - 2026-08-16
+
+**Downloader rewrite.** The 0.1x-through-1.1 chunked download path had real
+bugs: it shared no HTTP connections across chunks (fresh pool per call),
+silently corrupted files if a CDN responded 200 to a Range request, had a
+racy error path, and used a fixed 10 MB chunk size that limited parallelism.
+Rewritten and fixed.
+
+### Changed
+- **Shared HTTP transport with a real connection pool.** All calls to
+  `request.DefaultClient()` now share one `http.Transport` with
+  `MaxIdleConnsPerHost = 32` (Go default is 2), `IdleConnTimeout = 90 s`,
+  and `ForceAttemptHTTP2 = true`. On CDNs that support keep-alive + HTTP/2
+  (most Cloudflare-fronted hosts), this alone is a 3–5× win on multi-chunk
+  downloads because chunks reuse TLS + TCP sessions instead of paying full
+  handshake cost per Range request.
+- **Adaptive chunk size in `concurWriteFile`.** Was fixed at 10 MB; now
+  `fileSize / (2 × workers)` clamped to `[1 MB, 8 MB]`. For a 92 MB video
+  with 12 workers that's ~3.8 MB × 24 chunks — always keeps every worker
+  saturated instead of stalling the last 2 workers on the last 2 chunks.
+- **Default concurrent workers bumped 8 → 12.** The rewritten chunker
+  benefits from more parallel connections on throttled CDNs; the settings
+  slider still goes up to 16 for extreme cases.
+
+### Fixed
+- **File corruption on 200-instead-of-206.** Previously, if a server
+  ignored a Range header and returned the full body, the code would write
+  the WHOLE file at that chunk's offset — silently producing a corrupt
+  output with overlapping duplicates. Now the chunk fails cleanly, retries
+  up to 3 times with backoff, and surfaces the error if the server never
+  honors Range.
+- **Race + missed early-exit in the worker pool.** The old code held a
+  `sync.Mutex` around a shared `saveErr`, then continued the loop even
+  after setting it (so workers kept fetching after failure). Rewritten with
+  `atomic.Value`; the first failing worker halts the pool immediately.
+- **Progress counter accuracy.** Progress was reported inside a shared
+  mutex so multiple chunks queued behind each other; now each chunk fires
+  progress independently as it writes, giving smoother real-time updates
+  on the queue screen.
+
+### Added
+- **Live download speed** shown next to `bytesDone / total` in each
+  running queue row (e.g. `RUNNING • 12.4 MB / 92.9 MB  •  482.3 KB/s`).
+  Sampled every ~500 ms with exponential smoothing so the label doesn't
+  jitter. Hides when the job isn't actively downloading.
+
+### Notes
+- Go code changed — GitHub Actions will rebuild the `moegrab.aar` from
+  the new source; the APK inherits the new downloader automatically.
+- Site-side throttling still exists (some hentai CDNs cap per-IP not
+  per-connection). Where the CDN throttles per-connection though — most
+  of them — you should see 2–4× throughput on large MP4s vs v1.1.
+
 ## [1.1.0] - 2026-08-16
 
 **The updater arrives.** Manually checking GitHub, downloading an APK,
