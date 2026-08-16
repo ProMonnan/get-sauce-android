@@ -22,13 +22,24 @@ android {
         applicationId = "app.sahal.moegrab"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.0.0"
+        versionCode = 9
+        versionName = "1.0.1"
 
         vectorDrawables.useSupportLibrary = true
     }
 
     signingConfigs {
+        // Static debug keystore checked into the repo — same signature on every
+        // CI machine + every developer laptop, so debug APKs install as updates
+        // over previous debug APKs instead of failing with SIGNATURE_MISMATCH.
+        // This is FINE for a debug key (Android's own default debug keystore
+        // uses password "android" too); do not reuse for release.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
         create("release") {
             if (keystoreProps.isNotEmpty()) {
                 storeFile = rootProject.file(keystoreProps.getProperty("storeFile"))

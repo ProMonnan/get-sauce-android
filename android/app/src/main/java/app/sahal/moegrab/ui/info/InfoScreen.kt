@@ -31,7 +31,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -48,6 +47,7 @@ import app.sahal.moegrab.R
 import app.sahal.moegrab.bridge.ExtractedData
 import app.sahal.moegrab.bridge.ExtractedStream
 import app.sahal.moegrab.ui.common.InfoSkeleton
+import app.sahal.moegrab.ui.common.MoeTopBar
 import app.sahal.moegrab.ui.common.rememberVm
 import app.sahal.moegrab.util.humanBytes
 
@@ -67,8 +67,8 @@ fun InfoScreen(url: String, onBack: () -> Unit) {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.info_title)) },
+            MoeTopBar(
+                title = stringResource(R.string.info_title),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = null)

@@ -10,6 +10,55 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [1.0.1] - 2026-08-16
+
+Bug-fix pass on top of v1.0.0. If you're on v1.0.0, you'll need to
+uninstall it *once* before installing v1.0.1 (see Notes below) — after
+that, every future update installs cleanly over the previous version
+without an uninstall.
+
+### Fixed
+- **Signature mismatch on update.** Every CI run was generating a fresh
+  random debug keystore, so each release was signed with a different
+  key and Android refused to install the new version over the old one
+  ("App not installed as package conflicts…"). Committed a static
+  `android/app/debug.keystore` into the repo and wired the debug
+  signing config to use it, so every debug APK from now on is signed
+  with the same key. Updates just work.
+- **UI: giant empty band at the top of every screen.** The status bar
+  was set to the app background color while the TopAppBar defaulted to
+  `surface`, producing a visible color-shift band above the title.
+  Introduced a shared `MoeTopBar` composable with `containerColor =
+  Transparent` and centered titles, so the top bar visually merges with
+  the background. Applied to Queue, History, Info, Settings, and Sites.
+- **UI: Home screen content sat directly under the system clock.** Added
+  explicit `WindowInsets.statusBars` padding, tightened outer padding
+  from 20→14 dp, and shrank the hero star chip a touch. The whole
+  layout feels less cramped and less floaty at the same time.
+
+### Changed
+- **Default concurrent-worker count bumped from 4 → 8.** Many hentai
+  CDNs throttle per-connection instead of per-IP, so more parallel
+  Range-request chunks means noticeably higher throughput on
+  single-file MP4s. If a site is still slow, drag the slider in
+  Settings up to 12 or 16.
+
+### Notes
+- Since the app's debug-signing key changed, Android sees v1.0.1 as a
+  different app publisher than v1.0.0 and refuses to overwrite it. **One
+  final uninstall of v1.0.0 is required** before installing v1.0.1.
+  From v1.0.1 onwards, all future versions share the same key and will
+  install as normal updates.
+- Play Protect will pop a "scan this app?" dialog on install — that's
+  Play Protect flagging any sideloaded APK it hasn't seen before. Tap
+  "Install anyway" (or turn Play Protect off in the Play Store app if
+  you want silent updates). We can't suppress this without shipping on
+  the Play Store proper.
+- Download speed on `hentai-moon.com` / `hentaiplay.net` and similar
+  sites is often server-throttled (36 KB/s in the reported case). The
+  workers bump helps some, but a real speed fix for those hosts needs
+  the parallel-chunk enhancements coming in v1.1.
+
 ## [1.0.0] - 2026-08-16
 
 **First stable release.** The app is renamed, re-iconed, and now looks the

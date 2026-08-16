@@ -19,7 +19,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,6 +29,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import app.sahal.moegrab.R
+import app.sahal.moegrab.ui.common.MoeTopBar
 import app.sahal.moegrab.ui.common.rememberVm
 import app.sahal.moegrab.util.takePersistablePermissions
 
@@ -49,7 +49,7 @@ fun SettingsScreen() {
         }
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }) { padding ->
+    Scaffold(topBar = { MoeTopBar(title = stringResource(R.string.settings_title)) }) { padding ->
         Column(
             modifier = Modifier
                 .padding(padding)

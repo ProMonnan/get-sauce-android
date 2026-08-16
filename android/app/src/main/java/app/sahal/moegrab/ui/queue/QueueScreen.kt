@@ -28,7 +28,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +46,7 @@ import app.sahal.moegrab.data.db.DownloadJob
 import app.sahal.moegrab.data.db.JobStatus
 import app.sahal.moegrab.ui.common.ConfettiOverlay
 import app.sahal.moegrab.ui.common.EmptyState
+import app.sahal.moegrab.ui.common.MoeTopBar
 import app.sahal.moegrab.ui.common.rememberVm
 import app.sahal.moegrab.util.humanBytes
 
@@ -71,7 +71,7 @@ fun QueueScreen() {
         firstFrame = false
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.queue_title)) }) }) { padding ->
+    Scaffold(topBar = { MoeTopBar(title = stringResource(R.string.queue_title)) }) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             if (jobs.isEmpty()) {
                 EmptyState(

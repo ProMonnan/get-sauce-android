@@ -22,7 +22,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,6 +34,7 @@ import app.sahal.moegrab.R
 import app.sahal.moegrab.data.db.HistoryEntry
 import app.sahal.moegrab.ui.common.EmptyBoxIllustration
 import app.sahal.moegrab.ui.common.EmptyState
+import app.sahal.moegrab.ui.common.MoeTopBar
 import app.sahal.moegrab.ui.common.rememberVm
 import app.sahal.moegrab.util.humanBytes
 import java.text.DateFormat
@@ -49,8 +49,8 @@ fun HistoryScreen() {
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.history_title)) },
+            MoeTopBar(
+                title = stringResource(R.string.history_title),
                 actions = {
                     IconButton(onClick = { vm.clear() }) {
                         Icon(Icons.Filled.DeleteForever, contentDescription = stringResource(R.string.history_clear))

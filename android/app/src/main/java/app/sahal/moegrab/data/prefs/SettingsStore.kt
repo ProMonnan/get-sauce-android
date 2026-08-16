@@ -21,7 +21,7 @@ class SettingsStore(private val ctx: Context) {
 
     data class Snapshot(
         val outputTreeUri: String? = null,
-        val workers: Int = 4,
+        val workers: Int = 8,
         val timeoutMinutes: Int = 15,
         val proxy: String = "",
         val userHeaders: String = "",
@@ -31,7 +31,7 @@ class SettingsStore(private val ctx: Context) {
     val flow: Flow<Snapshot> = ctx.dataStore.data.map { p ->
         Snapshot(
             outputTreeUri = p[K_OUTPUT_TREE],
-            workers = p[K_WORKERS] ?: 4,
+            workers = p[K_WORKERS] ?: 8,
             timeoutMinutes = p[K_TIMEOUT] ?: 15,
             proxy = p[K_PROXY].orEmpty(),
             userHeaders = p[K_HEADERS].orEmpty(),

@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
@@ -44,9 +47,9 @@ import androidx.compose.ui.unit.dp
 import app.sahal.moegrab.R
 
 /**
- * Home. Entry point: URL box, big Fetch button, and a link into the
- * supported-sites reference. The header is styled to feel like a "hero" —
- * chip logo + display-weight app name.
+ * Home. Entry point: URL box + Fetch button + Sites link. Wrapped in a manual
+ * status-bar-inset padding so it sits below the system clock cleanly (there is
+ * no TopAppBar on this screen — the hero header IS the top decoration).
  */
 @Composable
 fun HomeScreen(
@@ -71,8 +74,10 @@ fun HomeScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .padding(horizontal = 20.dp)
+            .padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         AnimatedVisibility(
             visible = mounted,
@@ -91,24 +96,20 @@ fun HomeScreen(
                 animationSpec = tween(600, delayMillis = 120, easing = EaseOutCubic),
             ),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it },
                     singleLine = false,
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.home_hint)) },
-                    leadingIcon = {
-                        Icon(Icons.Filled.ContentPaste, contentDescription = null)
-                    },
+                    leadingIcon = { Icon(Icons.Filled.ContentPaste, contentDescription = null) },
                     shape = MaterialTheme.shapes.medium,
                 )
                 Button(
                     onClick = { if (text.isNotBlank()) onNavigateInfo(text.trim()) },
                     enabled = text.isNotBlank(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = MaterialTheme.shapes.medium,
                 ) {
                     Icon(Icons.Filled.Bolt, contentDescription = null)
@@ -130,7 +131,7 @@ fun HomeScreen(
             }
         }
 
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
 
         AnimatedVisibility(
             visible = mounted,
@@ -144,10 +145,9 @@ fun HomeScreen(
 @Composable
 private fun HeroHeader() {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        // Little rose "chip" — a stylized paw-print circle.
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(44.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
@@ -163,7 +163,7 @@ private fun HeroHeader() {
         Column {
             Text(
                 text = stringResource(R.string.app_name),
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
@@ -184,7 +184,7 @@ private fun TipCard() {
         ),
         shape = MaterialTheme.shapes.medium,
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 "Cloudflare-protected page?",
                 style = MaterialTheme.typography.titleSmall,
