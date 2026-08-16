@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The updater downloads the APK into ctx.cacheDir/updates/, then hands a
+         content:// URI to the system installer. Only this specific subdirectory
+         is exposed — nothing else in cacheDir can be read across the boundary. -->
+    <cache-path name="updates" path="updates/" />
+</paths>

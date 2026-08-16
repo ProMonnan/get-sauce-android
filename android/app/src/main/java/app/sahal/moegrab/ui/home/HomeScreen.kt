@@ -28,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -38,9 +39,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -70,6 +74,20 @@ fun HomeScreen(
     // reveal-in animation on first mount
     var mounted by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { mounted = true }
+
+    // one-tap paste from clipboard. Reading the clipboard here is a
+    // user-initiated action (they tapped the icon), so Android 12+ won't
+    // surface the "app read your clipboard" toast the way it does for
+    // silent auto-reads.
+    val ctx = LocalContext.current
+    val pasteFromClipboard: () -> Unit = {
+        val cb = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+        val clip = cb?.primaryClip
+        if (clip != null && clip.itemCount > 0) {
+            val s = clip.getItemAt(0).text?.toString().orEmpty().trim()
+            if (s.isNotBlank()) text = s
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -104,6 +122,15 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(R.string.home_hint)) },
                     leadingIcon = { Icon(Icons.Filled.ContentPaste, contentDescription = null) },
+                    trailingIcon = {
+                        IconButton(onClick = pasteFromClipboard) {
+                            Icon(
+                                Icons.Filled.ContentPaste,
+                                contentDescription = "Paste from clipboard",
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
                     shape = MaterialTheme.shapes.medium,
                 )
                 Button(

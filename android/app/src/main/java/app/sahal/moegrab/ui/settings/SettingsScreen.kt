@@ -35,7 +35,7 @@ import app.sahal.moegrab.util.takePersistablePermissions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onCheckForUpdates: () -> Unit = {}) {
     val vm: SettingsViewModel = rememberVm { SettingsViewModel(it) }
     val snap by vm.snapshot.collectAsState()
     val ctx = LocalContext.current
@@ -124,6 +124,26 @@ fun SettingsScreen() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.settings_truncate), modifier = Modifier.weight(1f))
                 Switch(checked = snap.truncate, onCheckedChange = vm::setTruncate)
+            }
+
+            HorizontalDivider()
+
+            // Manual update trigger — the app also auto-checks on cold start.
+            // This is the "I want to know NOW" button for users who don't want
+            // to wait for the next launch.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "Check for updates",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        "Fetches the latest release from GitHub.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                OutlinedButton(onClick = onCheckForUpdates) { Text("Check now") }
             }
         }
     }

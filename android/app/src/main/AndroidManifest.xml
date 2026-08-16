@@ -14,10 +14,24 @@
     <!-- Keep the device awake while downloads are in flight. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- v1.1 in-app updater: needed to hand a downloaded APK to the system
+         installer. User is still prompted by Android to allow "install from
+         this source" on first use — we can't bypass that, just trigger it. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Legacy scoped-storage fallback for API 26–28 (SAF preferred otherwise). -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+
+    <!-- Android 11+ (API 30) restricts package visibility. We need to see the
+         system PackageInstaller so ACTION_VIEW with an .apk mime resolves. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+    </queries>
 
     <application
         android:name=".app.App"
@@ -55,6 +69,18 @@
             android:name=".download.DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
+
+        <!-- FileProvider used by the in-app updater to hand the downloaded APK
+             (from cacheDir) to the system installer with a content:// URI. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updater.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/updater_paths" />
+        </provider>
 
         <provider
             android:name="androidx.startup.InitializationProvider"

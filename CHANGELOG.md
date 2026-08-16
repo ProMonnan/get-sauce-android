@@ -10,6 +10,57 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [1.1.0] - 2026-08-16
+
+**The updater arrives.** Manually checking GitHub, downloading an APK,
+tapping install, dismissing Play Protect — that's a five-step ritual
+you had to do for every release since v0.1.0. From v1.1 on, MoeGrab
+does the first four itself.
+
+### Added
+- **In-app auto-updater.** On every cold start, the app quietly queries
+  the GitHub Releases API for the latest tag. If a newer version is
+  published, a bottom-sheet appears with the version number, size,
+  release notes, and an "Update now" button. Tapping it streams the
+  arm64 APK into the app's private cache and hands it to Android's
+  system installer — you just tap "Install" on the OS prompt and the
+  update completes. All wrapped around a proper state machine
+  (`IDLE / CHECKING / AVAILABLE / DOWNLOADING / READY_TO_INSTALL /
+  FAILED / UP_TO_DATE`) so the UI never gets stuck.
+  - The updater is *silent* when there's nothing new — it never
+    surfaces the sheet just to say "you're up to date" on cold start.
+    A manual "Check now" button in Settings triggers the same flow but
+    *does* show the up-to-date state, so you get feedback when you ask.
+  - Only stable releases trigger the prompt: drafts and pre-releases
+    are ignored, so a nightly tag never nags you to install it.
+  - The APK asset is chosen preferring `arm64-v8a`, falling back to
+    `universal`, then to any `.apk`. Matches how the release workflow
+    names its outputs.
+  - First run on Android 8+ bounces you into the "install from unknown
+    sources" settings screen so you can grant the permission once —
+    after that the installer opens directly.
+- **One-tap paste from clipboard.** The URL field on Home now has a
+  paste icon on the right. Tap it to fill the field from clipboard —
+  no more triple-tap-hold-paste dance. (Not automatic — Android 12+
+  toasts every clipboard read, and we don't want to nag on every
+  launch. Manual-trigger only.)
+- **Manifest wiring.** Added `REQUEST_INSTALL_PACKAGES` permission,
+  a `<queries>` element so the installer intent resolves on API 30+,
+  a FileProvider (`{applicationId}.updater.fileprovider`) with a
+  `cache-path` scope limited to `updates/`, and an XML paths file.
+  The FileProvider only exposes the single subdir the updater writes
+  to — nothing else in cacheDir crosses the boundary.
+
+### Notes
+- **First update via the in-app updater** (v1.1.0 → v1.1.1 whenever that
+  ships) will prompt you to grant "install from unknown sources" for
+  MoeGrab. Grant it once and every future in-app update installs
+  silently after the download.
+- Play Protect will still pop its scan dialog for a while — it treats
+  every new APK signature as unknown until it's seen enough installs.
+  As MoeGrab signature ages (same key across every release now), that
+  dialog gets less frequent.
+
 ## [1.0.1] - 2026-08-16
 
 Bug-fix pass on top of v1.0.0. If you're on v1.0.0, you'll need to

@@ -60,7 +60,10 @@ private val NAV_SLIDE_IN = tween<androidx.compose.ui.unit.IntOffset>(220, easing
 private val NAV_SLIDE_OUT = tween<androidx.compose.ui.unit.IntOffset>(180, easing = EaseInOutCubic)
 
 @Composable
-fun AppNavHost(initialUrl: MutableState<String?>) {
+fun AppNavHost(
+    initialUrl: MutableState<String?>,
+    onCheckForUpdates: () -> Unit = {},
+) {
     val nav = rememberNavController()
     Scaffold(
         bottomBar = { BottomBar(nav) },
@@ -89,7 +92,7 @@ fun AppNavHost(initialUrl: MutableState<String?>) {
             }
             composable(Routes.QUEUE) { QueueScreen() }
             composable(Routes.HISTORY) { HistoryScreen() }
-            composable(Routes.SETTINGS) { SettingsScreen() }
+            composable(Routes.SETTINGS) { SettingsScreen(onCheckForUpdates = onCheckForUpdates) }
             composable(Routes.SITES) { SitesScreen(onBack = { nav.popBackStack() }) }
         }
     }
