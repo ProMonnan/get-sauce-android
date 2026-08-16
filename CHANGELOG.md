@@ -10,6 +10,16 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [0.1.5] - 2026-08-16
+
+### Fixed
+- `FfmpegMerger.kt` was accidentally reverted to the pre-stub version in the
+  v0.1.4 delta zip, breaking compilation with "Unresolved reference 'arthenica'".
+  Restored to the phase-1 stub that skips the mux step (video-only output for
+  multi-track streams; sidecar audio/caption files stay in staging).
+- `android.yml` push CI: bumped Go from 1.22.x to 1.25.x to match the release
+  workflow. Old version rejected `go get -tool` (Go 1.24+ syntax) and broke
+  the build on every push to main.
 ## [0.1.4] - 2026-08-16
 
 ### Added
