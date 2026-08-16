@@ -22,7 +22,7 @@ android {
         applicationId = "app.sahal.moegrab"
         minSdk = 26
         targetSdk = 35
-        versionCode = 
+        versionCode = 7
         versionName = "0.1.6"
 
         vectorDrawables.useSupportLibrary = true
