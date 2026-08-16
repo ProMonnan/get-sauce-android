@@ -10,13 +10,16 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
-## [0.1.6] - 2026-08-16
+## [0.1.7] - 2026-08-16
 
 ### Fixed
-- Launcher label now correctly reads **MoeGrab** instead of the leftover
-  "Get Sauce" string from before the rename. The build.gradle.kts / package
-  ID / icon were already MoeGrab; only `strings.xml` was stale.
-
+- **Launcher icon is finally the cat.** The density-specific icon PNGs
+  (mipmap-mdpi through mipmap-xxxhdpi, both square and round) plus the
+  adaptive-icon foreground PNG were missing from the repo — extracts from
+  earlier delta zips left them on disk but never got `git add`ed. Restored
+  the full icon set. Also removed the stale
+  `drawable/ic_launcher_foreground.xml` placeholder vector that Android
+  was falling back to.
 ## [0.1.5] - 2026-08-16
 
 ### Fixed
