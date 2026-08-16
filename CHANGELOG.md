@@ -10,6 +10,13 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [0.1.6] - 2026-08-16
+
+### Fixed
+- Launcher label now correctly reads **MoeGrab** instead of the leftover
+  "Get Sauce" string from before the rename. The build.gradle.kts / package
+  ID / icon were already MoeGrab; only `strings.xml` was stale.
+
 ## [0.1.5] - 2026-08-16
 
 ### Fixed
