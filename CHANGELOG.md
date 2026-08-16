@@ -10,6 +10,43 @@ Types of change: **Added**, **Changed**, **Fixed**, **Removed**.
 
 <!-- Add lines here as you work. Move them into a versioned section when you tag. -->
 
+## [1.3.0] - 2026-08-16
+
+**In-app player + a nasty bug from v1.2 patched.** The v1.2 downloader
+rewrite trusted the extractor's reported file size — which some sites
+(oppai.stream, hentaiplay.net) get wrong, causing HTTP 416 partway
+through a download. Fixed. Also: tap a completed download in History
+and it now opens directly in a built-in Media3 / ExoPlayer instead of
+kicking you out to a system chooser.
+
+### Fixed
+- **Downloads no longer fail with HTTP 416 midway through.** The
+  chunked downloader was trusting `stream.Size` from the extractor,
+  which for HLS-repackaged single-file endpoints (oppai.stream) can be
+  larger than the actual file. Any chunk enumerated past the true EOF
+  came back with 416. Now we probe the server with a one-byte Range
+  request first (`Range: bytes=0-0`) and read the authoritative total
+  from the response's `Content-Range` header. Extractor size becomes
+  a fallback only when the server refuses to report size.
+
+### Added
+- **In-app video player.** Tap a completed download in the History tab
+  and it opens in a full-screen player built on Media3 / ExoPlayer,
+  with standard controls (play/pause, scrub, mute, aspect toggle) and
+  a compact top bar showing the video's title. Non-video files
+  (image sets, unfamiliar extensions) still fall back to the system
+  chooser, so nothing regresses.
+- Media3 dependencies pulled in: `media3-exoplayer`, `media3-ui`,
+  `media3-datasource` at 1.4.1. Adds ~2 MB to the APK; worth it.
+
+### Notes
+- Player only handles video today. If you want an audio-first player
+  (for extracted audio-only streams), file it as a v1.4 request.
+- Cast to Chromecast is deliberately NOT included yet — Media3 has the
+  bits for it but Cast wants a discovery permission users would need to
+  grant, and I'd rather add it as an opt-in later than pop a permission
+  request on install.
+
 ## [1.2.0] - 2026-08-16
 
 **Downloader rewrite.** The 0.1x-through-1.1 chunked download path had real

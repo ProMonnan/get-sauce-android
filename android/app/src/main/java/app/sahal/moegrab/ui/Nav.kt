@@ -32,6 +32,7 @@ import app.sahal.moegrab.R
 import app.sahal.moegrab.ui.history.HistoryScreen
 import app.sahal.moegrab.ui.home.HomeScreen
 import app.sahal.moegrab.ui.info.InfoScreen
+import app.sahal.moegrab.ui.player.PlayerScreen
 import app.sahal.moegrab.ui.queue.QueueScreen
 import app.sahal.moegrab.ui.settings.SettingsScreen
 import app.sahal.moegrab.ui.sites.SitesScreen
@@ -47,6 +48,13 @@ object Routes {
 
     const val INFO_PATTERN = "info/{url}"
     fun info(url: String): String = "info/${URLEncoder.encode(url, "UTF-8")}"
+
+    // Player takes both a URI (content://, file://, or plain path) and a title
+    // for the top bar. Both encoded so nav's path parsing doesn't choke on
+    // slashes, colons, spaces, or Japanese characters in titles.
+    const val PLAYER_PATTERN = "player/{uri}/{title}"
+    fun player(uri: String, title: String): String =
+        "player/${URLEncoder.encode(uri, "UTF-8")}/${URLEncoder.encode(title, "UTF-8")}"
 
     fun decodeUrlArg(raw: String?): String? =
         raw?.let { URLDecoder.decode(it, "UTF-8") }
@@ -91,7 +99,14 @@ fun AppNavHost(
                 InfoScreen(url = Routes.decodeUrlArg(raw).orEmpty(), onBack = { nav.popBackStack() })
             }
             composable(Routes.QUEUE) { QueueScreen() }
-            composable(Routes.HISTORY) { HistoryScreen() }
+            composable(Routes.HISTORY) {
+                HistoryScreen(onPlay = { uri, title -> nav.navigate(Routes.player(uri, title)) })
+            }
+            composable(Routes.PLAYER_PATTERN) { back ->
+                val uri = Routes.decodeUrlArg(back.arguments?.getString("uri")).orEmpty()
+                val title = Routes.decodeUrlArg(back.arguments?.getString("title")).orEmpty()
+                PlayerScreen(uri = uri, title = title, onBack = { nav.popBackStack() })
+            }
             composable(Routes.SETTINGS) { SettingsScreen(onCheckForUpdates = onCheckForUpdates) }
             composable(Routes.SITES) { SitesScreen(onBack = { nav.popBackStack() }) }
         }

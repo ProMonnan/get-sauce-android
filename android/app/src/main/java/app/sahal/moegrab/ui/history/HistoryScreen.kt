@@ -42,7 +42,7 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen() {
+fun HistoryScreen(onPlay: (uri: String, title: String) -> Unit = { _, _ -> }) {
     val vm: HistoryViewModel = rememberVm { HistoryViewModel(it) }
     val entries by vm.history.collectAsState(initial = emptyList())
     val ctx = LocalContext.current
@@ -72,21 +72,40 @@ fun HistoryScreen() {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     items(entries, key = { it.id }) { e ->
-                        EntryCard(e, onOpen = {
-                            val uri = android.net.Uri.parse(e.finalUri)
-                            if (uri.scheme == "content") {
-                                val i = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(uri, "video/*")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        EntryCard(
+                            e,
+                            onOpen = {
+                                // In-app Media3 player for anything with a
+                                // playable URI. Falls back to external chooser
+                                // for content that isn't a video (image sets)
+                                // or that failed to save into SAF.
+                                if (looksPlayable(e.finalUri)) {
+                                    onPlay(e.finalUri, e.title)
+                                } else {
+                                    val uri = android.net.Uri.parse(e.finalUri)
+                                    val i = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, "*/*")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    runCatching { ctx.startActivity(Intent.createChooser(i, e.title)) }
                                 }
-                                runCatching { ctx.startActivity(Intent.createChooser(i, e.title)) }
-                            }
-                        })
+                            },
+                        )
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Rough test: does this URI point at something the in-app player can handle?
+ * ExoPlayer is happy with mp4/mkv/webm/ts/m3u8 — extension check is enough
+ * because the downloader always names files with the source's extension.
+ */
+private fun looksPlayable(uri: String): Boolean {
+    val lower = uri.lowercase()
+    return listOf(".mp4", ".mkv", ".webm", ".m3u8", ".ts", ".mov", ".m4v").any { lower.endsWith(it) }
 }
 
 @Composable

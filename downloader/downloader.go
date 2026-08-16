@@ -12,6 +12,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -279,9 +281,22 @@ func (downloader *downloaderStruct) save(URL static.URL, fileURI string, headers
 //   - Progress counter is now called with per-chunk bytes as they arrive, so
 //     the mobile UI actually reflects concurrent progress.
 func (downloader *downloaderStruct) concurWriteFile(URL string, file *os.File, headers map[string]string) error {
-	fileSize := downloader.stream.Size
-	if fileSize <= 0 {
-		// Unknown size => can't chunk. Fall back to the streaming writer.
+	// Probe the server for the AUTHORITATIVE file size before chunking.
+	// stream.Size from the extractor can be wrong (e.g. HLS-fragment total
+	// vs single-file endpoint size — oppai.stream returns 416 partway
+	// through if we trust the extractor's inflated number). A one-byte
+	// Range request is basically free and gives us the real Content-Range
+	// total, so we always use that when it's available.
+	realSize, sizeErr := probeContentSize(URL, headers, downloader.client)
+	var fileSize int64
+	switch {
+	case sizeErr == nil && realSize > 0:
+		fileSize = realSize
+	case downloader.stream.Size > 0:
+		fileSize = downloader.stream.Size
+	default:
+		// Unknown size and probe failed => can't chunk. Fall back to the
+		// streaming writer.
 		return downloader.writeFile(URL, file, headers)
 	}
 
@@ -419,6 +434,51 @@ func (downloader *downloaderStruct) downloadRange(URL string, file *os.File, hea
 // includes B/KB; here we always want "N MB" grain.
 func humanChunk(b int64) string {
 	return fmt.Sprintf("%.1f MB", float64(b)/1_000_000.0)
+}
+
+// probeContentSize asks the server for byte 0 with a Range request and parses
+// the total from the Content-Range header. Returns the size on success, an
+// error on any failure. Cheap (one byte transferred) so it's fine to call
+// before every chunked download.
+//
+// Content-Range format: "bytes 0-0/12345678" — the trailing number after
+// the slash is the total resource size.
+func probeContentSize(URL string, headers map[string]string, client *http.Client) (int64, error) {
+	req, err := http.NewRequest(http.MethodGet, URL, nil)
+	if err != nil {
+		return 0, err
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	req.Header.Set("Range", "bytes=0-0")
+
+	res, err := client.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		io.Copy(io.Discard, res.Body) // drain so the connection can be pooled
+		res.Body.Close()
+	}()
+
+	// If the server honoured Range, we get 206 and a Content-Range header.
+	// Some servers still send full body with 200 — accept Content-Length in
+	// that case as the total (single-request would have downloaded the whole
+	// thing anyway).
+	if cr := res.Header.Get("Content-Range"); cr != "" {
+		parts := strings.SplitN(cr, "/", 2)
+		if len(parts) == 2 && parts[1] != "*" {
+			if n, err := strconv.ParseInt(strings.TrimSpace(parts[1]), 10, 64); err == nil && n > 0 {
+				return n, nil
+			}
+		}
+	}
+	if res.StatusCode == http.StatusOK && res.ContentLength > 0 {
+		return res.ContentLength, nil
+	}
+	return 0, fmt.Errorf("cannot determine size: status=%d, Content-Range=%q, Content-Length=%d",
+		res.StatusCode, res.Header.Get("Content-Range"), res.ContentLength)
 }
 
 func (downloader *downloaderStruct) writeFile(URL string, file *os.File, headers map[string]string) error {

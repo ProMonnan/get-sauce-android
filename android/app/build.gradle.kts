@@ -22,8 +22,8 @@ android {
         applicationId = "app.sahal.moegrab"
         minSdk = 26
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.2.0"
+        versionCode = 12
+        versionName = "1.3.0"
 
         vectorDrawables.useSupportLibrary = true
     }
@@ -138,6 +138,12 @@ dependencies {
 
     // --- Documents / SAF helper ---
     implementation("androidx.documentfile:documentfile:1.0.1")
+
+    // --- Media3 / ExoPlayer (in-app player for downloaded files) ---
+    val media3 = "1.4.1"
+    implementation("androidx.media3:media3-exoplayer:$media3")
+    implementation("androidx.media3:media3-ui:$media3")
+    implementation("androidx.media3:media3-datasource:$media3")
 
     // --- Testing ---
     testImplementation("junit:junit:4.13.2")
