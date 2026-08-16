@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple placeholder foreground: a stylized "GS" mark on the adaptive-icon
+     background. Swap this out for a proper icon before shipping. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M39,44 h14 v6 h-8 v6 h6 v-4 h-2 v-2 h6 v8 c0,3 -2,4 -6,4 h-6 c-3,0 -6,-2 -6,-6 v-6 c0,-4 3,-6 6,-6z" />
+    <path
+        android:fillColor="#F8FAFC"
+        android:pathData="M56,44 h12 c3,0 6,2 6,6 v0 c0,3 -3,6 -6,6 h-6 v6 h-6 z m6,4 v4 h6 v-4 z" />
+</vector>
