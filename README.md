@@ -1,376 +1,119 @@
-# get-sauce <!-- omit in toc -->
+<div align="center">
 
-[![Build](https://github.com/gan-of-culture/get-sauce/actions/workflows/go.yml/badge.svg?branch=master)](https://github.com/gan-of-culture/get-sauce/actions/workflows/go.yml)
+<img src="android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" width="128" height="128" alt="MoeGrab icon" />
 
-Is a command line program to download Hentai videos and images from multiple websites. Most sites have very intrusive advertisements, disable downloading of content, limit download speeds or only provide lesser video resolutions, but this tool will always give you the opportunity to download the best available quality from each site. It's also possible to input URLs to a category or multiple URLs and get-sauce will download it all.
+# MoeGrab
 
-- [Installation](#installation)
-- [Getting started](#getting-started)
-  - [Download example](#download-example)
-  - [Multiple inputs](#multiple-inputs)
-  - [Captions](#captions)
-- [Options](#options)
-  - [Proxy](#proxy)
-- [Supported sites](#supported-sites)
-  - [Site requirements](#site-requirements)
-- [Credit](#credit)
-- [Donate](#donate)
-- [Licencse](#licencse)
+**An Android app for downloading hentai videos and images from 35+ supported sites.**
 
-## Installation
+A mobile port of the [`get-sauce`](https://github.com/gan-of-culture/get-sauce) CLI.
 
-The following dependencies are required and must be installed separately.
+[![Latest release](https://img.shields.io/github/v/release/ProMonnan/get-sauce-android?label=latest&color=B4262A)](https://github.com/ProMonnan/get-sauce-android/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/ProMonnan/get-sauce-android/total?color=B4262A)](https://github.com/ProMonnan/get-sauce-android/releases)
+[![License](https://img.shields.io/github/license/ProMonnan/get-sauce-android?color=B4262A)](LICENSE)
 
-- **[FFmpeg](https://www.ffmpeg.org)**
+</div>
 
-> **Note**: FFmpeg does not affect the download, only affects the final file merge.
+---
 
-If you don't want to build the app yourself checkout the [releases page](https://github.com/gan-of-culture/get-sauce/releases).
+## Install
 
-Otherwise you can use [Golang](https://golang.org/dl/) to install or update it:
+1. Grab the latest APK from the [Releases page](https://github.com/ProMonnan/get-sauce-android/releases/latest):
+   - **`moegrab-vX.Y.Z-arm64-v8a.apk`** — recommended for any phone from ~2017 onwards (~15 MB)
+   - **`moegrab-vX.Y.Z-universal.apk`** — works on any phone including older ARMv7 and x86 (~50 MB)
+2. Transfer the file to your phone (email, Drive, USB — whatever).
+3. Tap the APK. Android will block it once — tap **Settings**, allow installs from the source you used, back → **Install**.
+4. Open **MoeGrab** → **Settings** → **Pick folder** to choose where downloads go.
+5. **Home** → paste a URL → **Fetch info** → **Download**.
 
-```console
-go install github.com/gan-of-culture/get-sauce@latest
-```
+## Features
 
-Or if you got Golang already installed you can download the source code and run the program from the source code this:
-
-```console
-go run main.go ...
-```
-
-## Getting started
-
-Usage:
-
-```console
-get-sauce [OPTIONS] URL [URLs...]
-```
-
-### Download example
-
-```console
-get-sauce https://hentaimama.io/episodes/torokase-orgasm-animation-episode-1/
-```
-
-> Note: wrap the URL(s) in quotation marks if it contains special characters.  
-> `get-sauce "https://..."`
-
-The `-i` option displays all available quality of video without downloading.
-
-```console
-get-sauce -i https://hentaimama.io/episodes/torokase-orgasm-animation-episode-1/
-
- Site:      https://hentaimama.io/
- Title:     Torokase Orgasm The Animation Episode 1
- Type:      video
- Streams:   # All available qualities
-     [0]  -------------------
-     Type:            video
-     Info:            Mirror 1
-     Quality:         1280x720
-     Parts:           562
-     Size:            ~ 427.6 MB
-     # download with: get-sauce -s 0 ...
-
-
-     [1]  -------------------
-     Type:            video
-     Info:            Mirror 1
-     Quality:         842x480
-     Parts:           562
-     Size:            ~ 123.8 MB
-     # download with: get-sauce -s 1 ...
-
-
-     [2]  -------------------
-     Type:            video
-     Info:            Mirror 1
-     Quality:         640x360
-     Parts:           562
-     Size:            ~ 120.7 MB
-     # download with: get-sauce -s 2 ...
-
-
-     [3]  -------------------
-     Type:            video
-     Info:            Mirror 2
-     Size:            186.3 MB
-     # download with: get-sauce -s 3 ...
-
-
-     [4]  -------------------
-     Type:            video
-     Info:            Mirror 3
-     Size:            186.3 MB
-     # download with: get-sauce -s 4 ...
-```
-
-The default stream is 0 and it also offers the best available quality. If you want to download a different quality or from a mirrored server you can manually choose a stream with `-s`.
-
-### Multiple inputs
-
-You can also download multiple URLs at once:
-
-```console
-get-sauce -i https://nhentai.net/g/364616/ https://nhentai.net/g/364591/
-
- Site:      https://nhentai.net
- Title:     Matsuri tte Ii na
- Type:      image
- Streams:   # All available qualities
-     [0]  -------------------
-     Type:            image
-     Parts:           31
-     # download with: get-sauce -s 0 ...
-
-
- Site:      https://nhentai.net
- Title:     ASSTROLOGIC
- Type:      image
- Streams:   # All available qualities
-     [0]  -------------------
-     Type:            image
-     Parts:           36
-     # download with: get-sauce -s 0 ...
-```
-
-The URLs will be downloaded one by one.
-
-You can also use the `-F` option to read URLs from file:
-
-```console
-$ get-sauce -F ~/Desktop/URLs.txt
-
- Site:      cdn.discordapp.com
- Title:     LateNightSnack
- Type:      image
- Stream:
-     [0]  -------------------
-     Type:            image
-     Size:            7.8 MB
-     # download with: get-sauce -s 0 ...
-```
-
-URLs have to be separated with a new line.
-
-### Captions
-
-For most of the sites the captions (CC, OC or Subtitles) are hard encoded into the video file and can't be downloaded separately. If it is not encoded into the video and a caption file was found, then you can download it using the option `-c`.
-
-To see if the captions can be downloaded separately use the option `-i`. There will be extra information displayed if the option `-c` can be used.
-
-```console
-get-sauce -i https://hentai-moon.com/videos/285/isekai-harem-monogatari-ep-1/
-
- Site:      https://hentai-moon.com
- Title:     Isekai Harem Monogatari - Ep.1
- Type:      video
- Captions:  # All available languages
-     [0]  -------------------
-     Language:            English
-     # download with: get-sauce -c 0 ...
-
-
- Streams:   # All available qualities
-     [0]  -------------------
-     Type:            video
-     Size:            75.6 MB
-     # download with: get-sauce -s 0 ...
-```
-
-## Options
-
-```console
-
- -a             Amount of files (image boards only)
-
- get-sauce -a 5000 http...
-
----------------------------------------------------------------------------------------------------------
-
- -c             Download caption if separate to a extra file
-
- get-sauce -c 0 http...
-
----------------------------------------------------------------------------------------------------------
-
- -F             Download URLs listed in this file path
-
- get-sauce -F "/path/to/file"
-
----------------------------------------------------------------------------------------------------------
-
- -h             UserHeaders for the http requests. To bypass Cloudflare or DDOS-GUARD protection
-
- get-sauce -h "cf_clearance=..." http...
-
----------------------------------------------------------------------------------------------------------
- 
- -i             Show info for the provided URL
-
- get-sauce -i http...
-
----------------------------------------------------------------------------------------------------------
-
- -j             Show extracted data as json
-
- get-sauce -j http...
-
----------------------------------------------------------------------------------------------------------
-
- -m             Merge output (default, none, cbz). CBZ only works if output is a stream of datatype image
-
- get-sauce -m "mergeOption" http...
-
----------------------------------------------------------------------------------------------------------
-
- -o             Output name of the file
-
- get-sauce -o "myfilename" http...
-
----------------------------------------------------------------------------------------------------------
-
- -O             Output path of the files. This will create the directory if it doesn't exist
-
- get-sauce -O "/directory/path" http...
-
----------------------------------------------------------------------------------------------------------
-
- -p             Enter pages like 1,2,3-4,6,7,8-9 for doujins
-
- get-sauce -p 1,2,3-4 http...
-
----------------------------------------------------------------------------------------------------------
-
- -q             Quiet mode - show minimal information 
-
- get-sauce -q http...
-
----------------------------------------------------------------------------------------------------------
-
- -s             Select a specific stream | 0 is default and has the best quality
-
- get-sauce -s 0 http...
-
----------------------------------------------------------------------------------------------------------
-
- -S             Subdirectory for the downloaded content. It defaults to a cleaned up version of the title
-
- get-sauce -S http...
-
----------------------------------------------------------------------------------------------------------
-
- -t             Truncate file if it already exists
-
- get-sauce -t http...
-
----------------------------------------------------------------------------------------------------------
-
- -T             Set a custom timeout (in minutes) for the http.client
-
- get-sauce -T 15 http...
-
----------------------------------------------------------------------------------------------------------
-
- -v             Show version 
-
- get-sauce -v ...
-
----------------------------------------------------------------------------------------------------------
-
- -w             Number of download workers
-
- get-sauce -w 4 http...
-
-```
-
-### Proxy
-
-You can set the HTTP/HTTPS/SOCKS5 proxy using environment variables:
-
-```console
-$ HTTP_PROXY="http://127.0.0.1:1087/" get-sauce -i "https://rule34.paheal.net/post/view/7106055"
-```
-
-```console
-$ HTTPS_PROXY="http://127.0.0.1:1087/" get-sauce -i "https://rule34.paheal.net/post/view/7106055"
-```
-
-```console
-$ HTTP_PROXY="socks5://127.0.0.1:1080/" get-sauce -i "https://rule34.paheal.net/post/view/7106055"
-```
+- One-tap download from 35+ supported sites (paste URL → pick quality → done)
+- Foreground download service with progress notifications
+- Downloads queue and history, both persisted across restarts
+- Custom output folder via Android's Storage Access Framework
+- Per-site cookie / header settings for Cloudflare-protected sites
+- HTTP proxy support
+- Per-ABI + universal APK builds
 
 ## Supported sites
 
-The following links will direct you to adult content. Please keep that in mind!
+35 sites, same list as [upstream `get-sauce`](https://github.com/gan-of-culture/get-sauce#supported-sites). Full list is visible inside the app under **Home → Supported sites**.
 
-| Site                                                                            |       Images       |       Videos       | Requirements | Info |
-| ------------------------------------------------------------------------------- | :----------------: | :----------------: | :----------: |:----:|
-| [asmhentai.com](https://asmhentai.com)                                          | :heavy_check_mark: |         ?          |
-| [booruproject (ex. rule34, gelbooru)](https://booru.org/top)                    | :heavy_check_mark: | :heavy_check_mark: |
-| [comicporn.xxx](https://comicporn.xxx)                                          | :heavy_check_mark: |         ?          |
-| [danbooru.donmai.us](https://danbooru.donmai.us)                                | :heavy_check_mark: |         ?          |
-| [eahentai.com](https://eahentai.com)                                            | :heavy_check_mark: |         ?          |
-| [haho.moe (1080p, 720p, 480p, 360p)](https://haho.moe)                          |         ?          | :heavy_check_mark: |
-| [hanime.tv (720p, 480p, 360p)](https://hanime.tv)                               |         ?          | :heavy_check_mark: |
-| [hentai-moon.com (720p, 480p)](https://hentai-moon.com/watch-h/)                |         ?          | :heavy_check_mark: |
-| [hentai2read.com](https://hentai2read.com)                                      | :heavy_check_mark: |         ?          |
-| [hentai2w.com(720p, 480p, 360p)](https://hentai2w.com)                          |         ?          | :heavy_check_mark: |
-| [hentaicloud.com(720p)](https://www.hentaicloud.com)                            |        :x:         | :heavy_check_mark: |
-| [hentaiera.com](https://hentaiera.com)                                          | :heavy_check_mark: |         ?          |
-| [hentaienvy.com](https://hentaienvy.com)                                        | :heavy_check_mark: |         ?          |
-| [www.hentai-foundry.com](https://www.hentai-foundry.com/)                       | :heavy_check_mark: |         ?          |
-| [hentaifox.com](https://hentaifox.com)                                          | :heavy_check_mark: |         ?          |
-| [hentaihaven.xxx (1080p, 720p, 480p, 360p)](https://hentaihaven.xxx)            |         ?          | :heavy_check_mark: |
-| [hentaimama.io(1080p, 720p)](https://hentaimama.io)                             |         ?          | :heavy_check_mark: |
-| [hentainexus.com](https://hentainexus.com)                                      | :heavy_check_mark: |         ?          |
-| [hentaiplay.net(720p, 480p)](https://hentaiplay.net)                            |         ?          | :heavy_check_mark: |
-| [hentaipulse.com(720p, 480p)](https://hentaipulse.com)                          |         ?          | :heavy_check_mark: |
-| [hentairox.com](https://hentairox.com)                                          | :heavy_check_mark: |         ?          |
-| [hentaivideos.net (1080p, 720p, 480p, 360p)](https://hentaivideos.net/)         |         ?          | :heavy_check_mark: |
-| [hentaiworld.tv (1080p, 720p, 480p)](https://hentaiworld.tv/)                   |         ?          | :heavy_check_mark: |
-| [hentaizap.com](https://hentaizap.com)                                          | :heavy_check_mark: |         ?          |
-| [hitomi.la](https://hitomi.la/)                                                 | :heavy_check_mark: |         ?          |
-| [hstream.moe (2160p, 1080p, 480p)](https://hstream.moe/)                        |         ?          | :heavy_check_mark: |   :cookie:   | [#164](https://github.com/gan-of-culture/get-sauce/issues/164) |
-| [imhentai.xxx](https://imhentai.xxx)                                            | :heavy_check_mark: |         ?          |
-| [iwara.tv](https://iwara.tv/)                                                   | :heavy_check_mark: | :heavy_check_mark: |
-| [konachan.com](https://konachan.com/post?tags=)                                 | :heavy_check_mark: |         ?          |
-| [miohentai.com (1080p, 720p, 480p)](https://miohentai.com/)                     | :heavy_check_mark: |         ?          |
-| [nhentai.net](https://nhentai.net)                                              | :heavy_check_mark: |         ?          |   :cookie:   |
-| [ohentai.org (1080p, 720p, 480p)](https://ohentai.org/)                         |         ?          | :heavy_check_mark: |
-| [oppai.stream (2160p, 1080p, 720p)](https://oppai.stream/)                      |         ?          | :heavy_check_mark: |
-| [rule34.paheal.net](https://rule34.paheal.net)                                  | :heavy_check_mark: | :heavy_check_mark: |
-| [rule34video.com (2160p, 1080p, 720p, 480p, 360p)](https://rule34video.com/)    | :heavy_check_mark: | :heavy_check_mark: |
-| [simply-hentai.com](https://www.simply-hentai.com)                              | :heavy_check_mark: |         ?          |
-| [thehentaiworld.com](https://thehentaiworld.com)                                | :heavy_check_mark: | :heavy_check_mark: |
-| [yandere.re](https://yande.re/post)                                             | :heavy_check_mark: |         ?          |
+## Cloudflare / DDoS-Guard
 
-You can still try to use the universal downloader, if your site is not listed.
+Some sites (hstream.moe, hentaimama.io, etc.) sit behind Cloudflare and challenge mobile IPs aggressively. If a download stalls at 0 B or extraction fails, paste real browser cookies into **Settings → User headers**:
 
-### Site requirements
+1. Open the site on a desktop browser, F12 → Network → any request → **Request Headers**.
+2. Copy the values of `cookie:` and `user-agent:`.
+3. In MoeGrab, paste them into User headers, one per line: Cookie: cf_clearance=abc123...; other=xyz...
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ...
 
-🍪
---> you need to supply cookies for this extractor to work. Most likely it is used to bypass some kind of Cloudflare or DDOS-Guard protection
-> Note: separate the different header values using a newline
+4. Retry.
 
-```console
-get-sauce -h "cookie: cf_clearance=k2TGEnkzhz_PtHs09vMryROlD4O3UZhrDFrU4svgjdM-1665105987-0-150; csrftoken=bLiwSENr0mqSZZ27wan1xdjLazVFoXnnABJu7DtrhbNRUacpbEZhV0Eggc5lD8m5
-user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36" http...
+The `cf_clearance` cookie usually expires after ~2 hours; re-grab when downloads start failing again. Automating this via WebView is on the roadmap.
+
+## Roadmap
+
+- [ ] **v0.2.0** — Auto Cloudflare bypass (WebView cookie warmup)
+- [ ] **v0.3.0** — Restore ffmpeg-kit muxing for multi-track videos
+- [ ] **v0.4.0** — In-app updater + clipboard auto-detect + notification actions
+- [ ] **v0.5.0** — Parallel downloads (currently serialized)
+- [ ] **v0.6.0** — UI polish pass (animations, shimmer loading, better empty states)
+- [ ] **v1.0.0** — Stable, share-with-friends ready
+
+Requests welcome via [Issues](https://github.com/ProMonnan/get-sauce-android/issues).
+
+## Architecture
+
+┌────────────────────────────────────────────────────────┐
+│ Kotlin / Compose UI (MVVM per screen) │
+│ Room queue + history · DataStore settings │
+│ Foreground DownloadService · SAF output │
+└──────────────────────┬─────────────────────────────────┘
+│ Java method calls
+▼
+┌────────────────────────────────────────────────────────┐
+│ gomobile-generated .aar │
+│ class mobile.Mobile · interface mobile.ProgressListener│
+└──────────────────────┬─────────────────────────────────┘
+│
+▼
+┌────────────────────────────────────────────────────────┐
+│ Go: package mobile │
+│ Reuses upstream get-sauce extractors + downloader │
+└────────────────────────────────────────────────────────┘
+
+## Building from source
+
+Need Go 1.25+, Android SDK, NDK 26+, and gomobile installed.
+
+```bash
+# once
+go install golang.org/x/mobile/cmd/gomobile@latest
+gomobile init
+
+# every time
+bash scripts/build-aar.sh              # produces android/app/libs/moegrab.aar
+cd android && bash gradlew assembleDebug
+# APK: android/app/build/outputs/apk/debug/app-universal-debug.apk
 ```
 
-## Credit
+Or open the `android/` folder in Android Studio and hit Run — Gradle will invoke the AAR build automatically on first sync.
 
-- Thanks to [lux](https://github.com/iawia002/lux) for the great template
+## Releasing
 
-## Donate
+1. Move `## [Unreleased]` bullets in [CHANGELOG.md](CHANGELOG.md) into a new `## [x.y.z] - YYYY-MM-DD` section.
+2. Bump `versionCode` (int) and `versionName` (string) in `android/app/build.gradle.kts`.
+3. Commit + push to `main`.
+4. `git tag vX.Y.Z && git push origin vX.Y.Z`.
+5. [GitHub Actions](.github/workflows/android-release.yml) builds and publishes the release ~10 min later.
 
-You won't gain extra benefits from it. Although it's very much appriciated.
+## Credits
 
-```console
-XMR 4AFThbPDiig6tEZdRL4NnvDfqPETiuewDgpCJKkSs11BGCVqoydRUHkZr5cotGMx395V7c2swDxi5Xjhbztiqyod7P31szF
-```
+- **[gan-of-culture/get-sauce](https://github.com/gan-of-culture/get-sauce)** — the Go CLI this app wraps. All extractor magic lives there.
+- **[golang.org/x/mobile](https://pkg.go.dev/golang.org/x/mobile)** — the gomobile toolchain that bridges Go to Android.
 
-## Licencse
+## License
 
-Pretty sure [MIT](LICENSE) is the way to go
+MIT, same as upstream — see [LICENSE](LICENSE).
