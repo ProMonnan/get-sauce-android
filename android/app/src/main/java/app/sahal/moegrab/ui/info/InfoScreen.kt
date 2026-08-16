@@ -1,0 +1,169 @@
+package app.sahal.moegrab.ui.info
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import app.sahal.moegrab.R
+import app.sahal.moegrab.bridge.ExtractedData
+import app.sahal.moegrab.bridge.ExtractedStream
+import app.sahal.moegrab.ui.common.rememberVm
+import app.sahal.moegrab.util.humanBytes
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InfoScreen(url: String, onBack: () -> Unit) {
+    val vm: InfoViewModel = rememberVm(key = "info:$url") { InfoViewModel(it, url) }
+    val state by vm.state.collectAsState()
+    val snackbar = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.snack) {
+        state.snack?.let {
+            snackbar.showSnackbar(it)
+            vm.clearSnack()
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.info_title)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+            )
+        },
+        snackbarHost = { SnackbarHost(snackbar) },
+    ) { padding ->
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            when {
+                state.loading -> Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
+                state.error != null -> Text(
+                    text = stringResource(R.string.err_extract_fmt, state.error!!),
+                    modifier = Modifier.padding(16.dp),
+                    color = MaterialTheme.colorScheme.error,
+                )
+                else -> InfoBody(state, vm)
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoBody(state: InfoUiState, vm: InfoViewModel) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(state.results, key = { it.sourceUrl + it.title }) { data ->
+            EntryCard(data, state.selectedStreamId[data.sourceUrl], vm)
+        }
+    }
+}
+
+@Composable
+private fun EntryCard(data: ExtractedData, selected: String?, vm: InfoViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(data.title, style = MaterialTheme.typography.titleMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
+            Text("${data.site}   •   ${data.type}", style = MaterialTheme.typography.bodySmall)
+
+            data.streams.forEach { s ->
+                StreamRow(
+                    stream = s,
+                    selected = selected == s.id,
+                    onSelect = { vm.selectStream(data.sourceUrl, s.id) },
+                )
+            }
+
+            Text(
+                text = if (data.captions.isEmpty()) stringResource(R.string.info_caption_none)
+                       else "Captions: " + data.captions.joinToString { it.language },
+                style = MaterialTheme.typography.bodySmall,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                androidx.compose.material3.Button(
+                    onClick = { vm.enqueue(data) },
+                    enabled = data.streams.isNotEmpty(),
+                ) {
+                    Icon(Icons.Filled.Download, contentDescription = null)
+                    Text(stringResource(R.string.info_download), modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StreamRow(
+    stream: ExtractedStream,
+    selected: Boolean,
+    onSelect: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Column(Modifier.padding(start = 4.dp)) {
+            val label = buildString {
+                append(stream.quality.ifBlank { "stream ${stream.id}" })
+                if (stream.info.isNotBlank()) append("   •   ${stream.info}")
+                if (stream.ext.isNotBlank()) append("   •   .${stream.ext}")
+            }
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            val sub = buildString {
+                if (stream.parts > 0) append("${stream.parts} parts")
+                if (stream.size > 0) {
+                    if (isNotEmpty()) append("   •   ")
+                    append(humanBytes(stream.size))
+                }
+            }
+            if (sub.isNotBlank()) Text(sub, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
